@@ -1,0 +1,6 @@
+[toolchain]
+# 锁定为当前 stable；CI 与开发机使用同一工具链，不跟随 nightly。
+# 见 AGENTS.md §2.2。正式版本如需精确到补丁号，再改为具体版本（如 "1.83.0"）。
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

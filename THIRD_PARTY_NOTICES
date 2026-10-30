@@ -1,0 +1,22 @@
+# Third-Party Notices
+
+本仓库当前处于阶段 0（POC 尚未开始），尚未引入任何第三方运行时依赖
+（无 Cargo.toml / pubspec.yaml），因此本文件暂为空。
+
+当工程引入 Rust crate 与 Dart/Flutter package 后，须在此汇总**所有直接依赖
+与传递依赖**的许可证声明，至少包含：
+
+- 依赖名称与版本
+- 所用开源许可证（MIT / Apache-2.0 / BSD 等）
+- 上游源码或许可证原文链接
+
+维护要求（见 AGENTS.md §2.1 / §2.2）：
+- 默认依赖不得要求商业 UI 授权；
+- 直接与传递依赖都要核许可证、维护状态、平台支持；
+- 正式版本锁定 Cargo.lock + pubspec.lock，只升级测过的组合。
+
+建议的生成方式（待工具链落地后落实）：
+- Rust: `cargo install cargo-about` 后 `cargo about generate notices.toml` 导出；
+- Dart/Flutter: 用 `flutter pub deps` / `license_check` 汇总。
+
+注意：本文件须随依赖变化同步更新，发布前必须核对与代码实际依赖一致。
