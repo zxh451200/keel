@@ -1,0 +1,22 @@
+# Git 换行符策略：Windows 开发机默认 core.autocrlf=true，会把脚本签出成 CRLF
+# 导致 bash/cmd 解析失败，因此按文件类型固定换行符。
+* text=auto
+
+# 必须在 Linux/macOS CI 与 Git Bash 中原样执行的脚本
+*.sh  text eol=lf
+*.bash text eol=lf
+
+# 只允许 CRLF 的平台文件
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# 二进制与生成物不做换行/文本处理
+*.png binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.pdf binary
+*.zip binary
+*.dll binary
+*.exe binary
+*.lib binary

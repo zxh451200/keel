@@ -1,14 +1,27 @@
 # Keel — 技术基线与开发规范
 
-最后更新：2026-10-31。来源：《Keel Rust + Flutter 通用桌面 Admin 技术总方案 v1.1 安全加固版》、安全发布检查清单 v1.1、2026-10-31 目录与分层评审结论。本文件是技术基线与开发规范的唯一权威；产品需求与详细规范见 `docs/REQUIREMENTS.md`（读取规则见 §8）。历史版本文档只在仓库外归档，不进仓库。README 只做入口。
+最后更新：2026-11-01。来源：《Keel Rust + Flutter 通用桌面 Admin 技术总方案 v1.1 安全加固版》、安全发布检查清单 v1.1、2026-10-31 目录与分层评审结论、2026-11-01 阶段 0 重建与桥接验证结论。本文件是技术基线与开发规范的唯一权威；产品需求与详细规范见 `docs/REQUIREMENTS.md`（读取规则见 §8）。历史版本文档只在仓库外归档，不进仓库。README 只做入口。
 
 ## 0. 当前状态（先读，别假设）
 
-- 2026-10-31：工程代码已全部清空，仓库只保留文档（`AGENTS.md`、`README.md`、`LICENSE`、`docs/REQUIREMENTS.md`、`.gitignore`）。历史代码快照存于仓库外，不随仓库分发。
-- 待按需求文档 §10 阶段 0 重建：官方 Flutter Windows 项目 + Rust crate + FRB 最小样例 + 工具链/锁文件/生成步骤。
-- `rust-toolchain.toml`、`THIRD_PARTY_NOTICES` 待补；`LICENSE` 已定 MIT。
-- 仓库已 `git init`（分支 `main`），尚无提交，首个提交待配作者身份。
-- 阶段 0 的 POC 尚未开始。
+- 2026-11-01：阶段 0 主体落地。官方 Flutter Windows 工程 + Rust crate + FRB 2.13.0 骨架可构建可运行；
+  桥接三类样例（同步字符串 / 同步结构体 / 异步结构体）在 `flutter test integration_test -d windows`
+  真实构建下通过，Dart 侧展示层与 FFI 接线分离，`flutter test` 不需要动态库。
+- 工具链与锁定：`rust-toolchain.toml`（stable）、`rust/Cargo.lock`、`pubspec.lock` 已入库；
+  codegen 与门禁命令见 README「常用命令」。新增直接依赖：`tokio`（锁定 1.54.1，仅 `time` feature，
+  runtime 由 FRB 创建）。
+- 依赖治理：`rust/deny.toml`（cargo-deny 0.20：许可证白名单 / 来源限制 / 重复依赖 / 公告）+
+  `scripts/security-check.sh`（报告写入 gitignore 的 `build/reports/`；退出码 0 通过 / 1 违规或缺工具 /
+  3 无违规但公告库取不到、发布不放行）；`THIRD_PARTY_NOTICES` 按依赖包 LICENSE 正文核对（2026-11-01）。
+  2026-11-01 为清除 cargo-audit 报出的 yanked/unsound/unmaintained 跑过一次 `cargo update`
+  （semver 范围内，tokio 1.34.0 → 1.54.1 等），更新后重跑全部门禁与 Windows 集成测试。
+- 阶段 0 未完项：CI 与 secret scanning、SBOM、OSV-Scanner 尚未配置（远端为 GitHub，CI 形态待确认）；
+  `.gitattributes` 已固定脚本换行符。
+- 本机开发注意：`C:\tools\bin\flutter` / `C:\tools\bin\dart` 包装脚本导出 `PUB_HOSTED_URL` 指向清华镜像，
+  触发依赖重新解析的命令（本会话是 `flutter pub deps`）会把 `pubspec.lock` 里 35 处 `url:` 从
+  `https://pub.dev` 改写成镜像地址（版本号与 sha256 不变）。提交前必须 `git diff pubspec.lock` 复核并
+  还原为 pub.dev；发行构建按需求文档 §7.4 用官方 registry 重建。
+- 数据网格与 SQLite/SQLx 选型验证（需求文档 §6、阶段 2）尚未开始；不以未验证网格为正式基础。
 
 ## 1. 定位、目标与非目标
 
@@ -133,6 +146,7 @@ keel/
 ├─ rust_builder/                    # ⚙ FRB 模板：cargokit 构建插件，挂进 flutter build
 ├─ rust/
 │  ├─ Cargo.toml  Cargo.lock
+│  ├─ deny.toml                     # cargo-deny：许可证白名单/来源/重复依赖/公告
 │  ├─ migrations/                  # 000N_描述.sql，编号连续（sqlx migrate add -s）
 │  ├─ src/
 │  │  ├─ lib.rs
@@ -147,14 +161,15 @@ keel/
 │  └─ tests/                       # 真 SQLite 集成测试
 ├─ test/{core,features,shared}/    # 只镜像顶层，不做深镜像
 ├─ integration_test/               # 加载真实 Rust 库的端到端测试
-├─ scripts/                        # codegen 包装、许可证扫描、打包
+├─ scripts/                        # security-check.sh（许可证/公告）；codegen 包装与打包按需再加
 ├─ windows/  linux/                # ⚙ flutter create 平台壳
 ├─ packaging/{windows,linux}/      # 安装器与发行物；不另建 installer/
 ├─ pubspec.yaml  pubspec.lock  analysis_options.yaml
+├─ .gitattributes                   # 固定脚本 LF / 平台文件 CRLF（Windows 开发机 autocrlf=true）
 ├─ flutter_rust_bridge.yaml
-├─ rust-toolchain.toml             # 待补
+├─ rust-toolchain.toml             # 已建：stable + rustfmt/clippy
 ├─ LICENSE                         # MIT（已建）
-└─ THIRD_PARTY_NOTICES             # 待补
+└─ THIRD_PARTY_NOTICES             # 已建：按依赖包 LICENSE 正文核对（2026-11-01）
 ```
 
 规则：
@@ -246,7 +261,9 @@ flutter_rust_bridge_codegen generate                        # 改 rust/src/api �
 cd rust && cargo fmt && cargo clippy --all-targets -- -D warnings && cargo test
 cd rust && sqlx migrate add -s <描述>                      # 新建迁移，必须带 -s 走顺序编号
 flutter analyze && flutter test
+bash scripts/security-check.sh               # 许可证/来源/重复依赖/公告，报告进 build/reports/
 flutter gen-l10n                                          # 改 ARB 后
+flutter test integration_test -d windows                  # 真加载 Rust 动态库的桥接端到端
 flutter run -d windows
 flutter build windows --release
 ```

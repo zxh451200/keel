@@ -1,6 +1,6 @@
 # Keel — 产品需求与详细规范
 
-最后更新：2026-10-31。技术基线与开发规范见 [AGENTS.md](../AGENTS.md)；本文件是产品需求与详细规范的权威，2026-10-31 自 AGENTS.md 拆分而来，后续独立维护。
+最后更新：2026-11-01（§7 依赖与许可按当前锁定版本复核）。技术基线与开发规范见 [AGENTS.md](../AGENTS.md)；本文件是产品需求与详细规范的权威，2026-10-31 自 AGENTS.md 拆分而来，后续独立维护。
 
 **读取规则：按需读取，不要求全读。** 任务涉及某领域时，先读对应章节再动手；不涉及的章节不读，也不凭记忆推断。AGENTS.md §8 有“任务类型 → 章节”对照表。
 
@@ -150,13 +150,15 @@ Keel 自身以 MIT 发布（见 §7.5），第三方依赖各按原许可执行�
 
 Flutter/Dart BSD-3-Clause（引擎与包另有清单）；flutter_rust_bridge MIT；flutter_riverpod MIT；pluto_grid MIT；fluent_ui BSD-3-Clause（社区实现，维护集中度需关注，可替换）；intl / flutter_localizations BSD-3-Clause；file_selector BSD-3-Clause；SQLx MIT OR Apache-2.0；Tokio MIT；Serde/serde_json MIT OR Apache-2.0；tracing 系列 MIT；thiserror/anyhow MIT OR Apache-2.0；chrono MIT OR Apache-2.0；uuid Apache-2.0 OR MIT；csv MIT OR Unlicense；zip MIT；regex MIT OR Apache-2.0；dirs MIT OR Apache-2.0。
 
-以下为代码清空前快照的核对记录（2026-10-31；`pubspec.yaml` 已不存在，重建时按本节重新核验）：`cupertino_icons` MIT；`flutter_lints` BSD-3-Clause（供 `analysis_options.yaml` 启用）；`plugin_platform_interface` BSD-3-Clause；`integration_test` / `flutter_test` / `flutter_driver` BSD-3-Clause（Flutter SDK）；`tempfile`（dev）MIT OR Apache-2.0；`rust_builder/cargokit` 为 vendored 源码，自带 LICENSE（MIT + Apache-2.0 文本），不得删除；`ffi` / `ffigen`（rust_builder 的 dev 依赖，不随发行物）待核。
+以下为 2026-11-01 按**当前锁定版本**的核对记录（口径：读依赖包内 LICENSE 正文，不看元数据字段；逐条正文见 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES)）：`flutter_rust_bridge` 2.13.0 MIT（Rust crate 发行包不含正文，按同仓库 Dart 包正文与上游声明判定）；`tokio` 1.54.1 MIT；`allo-isolate` 0.1.27 Apache-2.0 单许可（用 `license-file` 而非 SPDX 字段）；`cupertino_icons` 1.0.9 MIT；`flutter_lints` 6.0.0 与 `lints` 6.1.0 BSD-3-Clause；`plugin_platform_interface` 2.1.8 BSD-3-Clause；`integration_test` / `flutter_test` / `flutter_driver` / `sky_engine`（Flutter SDK）BSD-3-Clause；`rust_builder/cargokit` 为 vendored 源码，自带 LICENSE（Copyright 2022 Matej Knopp + MIT 正文），不得删除；`ffi` / `ffigen` 是 rust_builder 的 dev 依赖，未进入根 `pubspec.lock`，不随发行物，仍待实际启用时核；`tempfile` 未引入（代码清空前快照里的 dev 依赖）。
 
-标注：`intl`、`file_selector`、`pluto_grid`、`riverpod`、`fluent_ui` 尚未进入 `pubspec.yaml`，属计划/候选依赖；引入时按本节重新核验。
+`cargo deny check`（`rust/deny.toml`）与 `cargo audit` 已可运行；本机到 RustSec 公告库的网络不通时以离线缓存降级，发布门禁要求 CI 联网判定。
+
+标注：`intl`、`file_selector`、`pluto_grid`、`riverpod`、`fluent_ui`、`sqlx` 尚未进入 `pubspec.yaml` / `Cargo.toml`，属计划/候选依赖；引入时按本节重新核验。
 
 ### 7.3 自动化检查
 
-- Rust：`cargo fmt --check`、`cargo clippy`、`cargo test`；`cargo-deny` 查 license/advisory/bans/sources；`cargo audit` 查 RustSec。
+- Rust：`cargo fmt --check`、`cargo clippy`、`cargo test`；`cargo-deny` 查 license/advisory/bans/sources；`cargo audit` 查 RustSec。统一入口 `bash scripts/security-check.sh`（报告写入 `build/reports/`；退出码 0 通过 / 1 违规或缺工具 / 3 无违规但公告库取不到，发布不放行）。
 - Dart：`analysis_options.yaml` 引入 `flutter_lints` 官方推荐规则；`dart format --set-exit-if-changed`、`flutter analyze`、`flutter test`。
 - 桥接：生成后检查工作区无非预期差异，生成步骤可复现。
 - 发布流水线产出依赖清单与许可证报告；高风险/不明许可证人工复核，不自动放行。
@@ -177,12 +179,12 @@ Flutter/Dart BSD-3-Clause（引擎与包另有清单）；flutter_rust_bridge MI
 | 文件 | 归属 | 现状 | 要求 |
 |---|---|---|---|
 | `LICENSE` | Keel 自身出站许可 | 已定：MIT（2026-10-31） | 保留版权与许可声明；更换许可主体时同步本文件与 §7.1 |
-| `THIRD_PARTY_NOTICES.md` | 运行时依赖的版权与 NOTICE | 缺失 | 由 `cargo-deny` + `dart pub deps` 结果生成；覆盖直接与传递运行时依赖，保留原文声明 |
-| Flutter `NOTICES` | 引擎、框架与 SDK 包 | 未验证 | 构建后确认 `data/flutter_assets/NOTICES` 存在，并随 Windows/Linux 发行包发布 |
-| `rust_builder/cargokit/LICENSE` | vendored 源码 | 随代码清空移除 | 重建时随 FRB 模板恢复；若保留该源码，其 LICENSE 不得删除，声明并入 THIRD_PARTY_NOTICES |
-| `assets/branding/*` | 品牌图片与图标 | 无来源/授权记录 | 原创需注明归属；第三方需附许可与来源 |
+| `THIRD_PARTY_NOTICES` | 运行时依赖的版权与 NOTICE | 已建（2026-11-01 按正文核对，无 `.md` 后缀） | 覆盖直接与传递运行时依赖，保留原文声明；随依赖变化同步更新 |
+| Flutter `NOTICES` | 引擎、框架与 SDK 包 | 已验证：Windows 构建产物含 `data/flutter_assets/NOTICES.Z`（gzip，解压约 1.3 MB） | 随 Windows/Linux 发行包发布 |
+| `rust_builder/cargokit/LICENSE` | vendored 源码 | 已随 FRB 2.13.0 模板恢复 | 该源码保留时其 LICENSE 不得删除，声明已并入 `THIRD_PARTY_NOTICES` |
+| `assets/branding/*` | 品牌图片与图标 | 已入库（10 个文件，约 4.8 MB），但无来源/授权记录，且未在 `pubspec.yaml` 声明、无代码引用 | 原创需注明归属；第三方需附许可与来源；确认取舍后再在 pubspec 声明 |
 | 字体文件 | 未来引入 | 暂无 | 每个字体单独附许可；OFL 字体保留版权行与保留字体名条款 |
-| `rust/Cargo.lock`、`pubspec.lock` | 依赖版本 | 缺失，阶段 0 重建时生成 | 发行构建只用锁定版本 |
+| `rust/Cargo.lock`、`pubspec.lock` | 依赖版本 | 已生成并入库（2026-11-01） | 发行构建只用锁定版本 |
 | SBOM（CycloneDX 或 SPDX） | 构建产物 | 缺失 | 发布流水线生成并随包保留 |
 | `cargo-deny` / OSV / `dart pub deps` 报告 | 审计产物 | 缺失 | 发布前留存；例外必须带编号与到期复查日期 |
 
