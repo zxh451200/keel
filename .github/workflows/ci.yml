@@ -95,16 +95,21 @@ jobs:
       - name: 固定版本的扫描二进制（校验 SHA-256 后加入 PATH）
         run: |
           set -euo pipefail
-          tools="$RUNNER_TEMP/tools"
+          # RUNNER_TEMP 在 Windows runner 上是 D:\a\_temp 这种反斜杠路径，
+          # 先统一转成 Git Bash 的 POSIX 路径再拼；写回 GITHUB_PATH 时反过来转成 Windows 路径。
+          tools="$(cygpath -u "$RUNNER_TEMP")/keel-tools"
           mkdir -p "$tools"
+
           curl -sSLf --retry 3 -o "$tools/osv-scanner.exe" \
             "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_windows_amd64.exe"
-          printf '%s  %s\n' "$OSV_SCANNER_WINDOWS_SHA256" "$tools/osv-scanner.exe" | sha256sum -c -
+          ( cd "$tools" && printf '%s  %s\n' "$OSV_SCANNER_WINDOWS_SHA256" osv-scanner.exe | sha256sum -c - )
+
           curl -sSLf --retry 3 -o "$tools/gitleaks.zip" \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_windows_x64.zip"
-          printf '%s  %s\n' "$GITLEAKS_WINDOWS_SHA256" "$tools/gitleaks.zip" | sha256sum -c -
+          ( cd "$tools" && printf '%s  %s\n' "$GITLEAKS_WINDOWS_SHA256" gitleaks.zip | sha256sum -c - )
           unzip -q -o "$tools/gitleaks.zip" gitleaks.exe -d "$tools"
-          echo "$tools" >> "$GITHUB_PATH"
+
+          echo "$(cygpath -w "$tools")" >> "$GITHUB_PATH"
           "$tools/osv-scanner.exe" --version
           "$tools/gitleaks.exe" version
 
