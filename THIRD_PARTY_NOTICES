@@ -52,7 +52,11 @@ LICENSE 正文**。本轮核对日期：2026-11-01，核对对象为 `rust/Cargo
   并用 lock 内的 sha256 / checksum 比对同一包。
   镜像环境下 `dart pub` 的安全公告拉取会失败（构建日志出现 `Unable to fetch advisories ... from mirrors.tuna`），
   即 pub.dev 公告这一路在开发机不可用，必须在 CI 补。
-- SBOM（CycloneDX/SPDX）、OSV-Scanner、secret scanning 属发布流水线事项，见 `docs/REQUIREMENTS.md` §7.4，随 CI 落地。
+- OSV-Scanner 与 gitleaks 已接入 CI（`.github/workflows/ci.yml`，固定版本 + SHA-256 校验）：
+  `osv-scanner` 2.7.0 按 LICENSE 正文为 Apache-2.0，`gitleaks` 8.30.1 为 MIT；两者只在 CI/开发期使用，
+  不链接进发行物。CI 里 3 个 Action 固定到完整 commit SHA；没有采用需要 EULA 的 gitleaks Action。
+  本机实测：`cargo deny` 四项、`cargo audit`、OSV（`rust/Cargo.lock` 83 包 + `pubspec.lock` 42 包）、
+  gitleaks 全绿。SBOM（CycloneDX/SPDX）、签名与发布工作流、Defender 扫描记录属阶段 4，见 §7.4。
 
 ## 4. 复现命令
 

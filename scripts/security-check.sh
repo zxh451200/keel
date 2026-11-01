@@ -6,7 +6,9 @@
 #   cargo install cargo-license --locked
 #   cargo install cargo-deny  --locked
 #   cargo install cargo-audit --locked
-# 可选第二数据源（CI 中启用）：OSV-Scanner https://google.github.io/osv-scanner/installation/
+# 可选工具（存在则执行，缺失只提示 SKIP；CI 里固定版本 + SHA-256 校验后安装）：
+#   OSV-Scanner  https://google.github.io/osv-scanner/installation/   （扫两个 lock 文件）
+#   gitleaks     https://github.com/gitleaks/gitleaks                  （扫 git 历史的密钥）
 #
 # 公告类检查需要访问 https://github.com/RustSec/advisory-db。本机取不到时：
 #   cargo-audit 降级为 --no-fetch（用本地缓存公告库），结果标 PARTIAL；
@@ -95,11 +97,21 @@ fi
 
 run "$ROOT" "Dart 依赖清单" dart-deps.txt flutter pub deps --style=list
 
+# OSV-Scanner：Cargo.lock 与 pubspec.lock 的第二数据源（2.7.0 实测两种 lock 都能解析）。
+# CI 里用固定版本 + SHA-256 校验后的二进制，放在 PATH 上由本脚本调用。
 if command -v osv-scanner >/dev/null 2>&1; then
-  run "$ROOT" "osv-scanner" osv-scanner.txt \
-    osv-scanner --lockfile=Cargo.lock --lockfile=pubspec.lock
+  run "$ROOT" "osv-scanner" osv-scan.txt \
+    osv-scanner --lockfile=rust/Cargo.lock --lockfile=pubspec.lock \
+    --output=build/reports/osv-scan.json
 else
-  echo "SKIP  osv-scanner 未安装（可选，发布前在 CI 中启用）"
+  echo "SKIP  osv-scanner 未安装（可选；发布前在 CI 中固定版本运行）"
+fi
+
+# secret scanning：扫描 git 历史，报告中不打印明文。
+if command -v gitleaks >/dev/null 2>&1; then
+  run "$ROOT" "gitleaks（密钥扫描）" gitleaks.txt gitleaks detect --source . --redact
+else
+  echo "SKIP  gitleaks 未安装（可选；CI 中固定版本运行）"
 fi
 
 echo

@@ -58,8 +58,9 @@ flutter build windows --release
 `rust-toolchain.toml`、`Cargo.lock`、`pubspec.lock`、`THIRD_PARTY_NOTICES`、`rust/deny.toml`、
 `scripts/security-check.sh`、`.gitattributes` 均已入库。
 
-未完项：CI 与 secret scanning / SBOM / OSV-Scanner（远端为 GitHub，CI 形态待确认）；
-数据网格与 SQLite+SQLx 选型验证（需求文档 §6、阶段 2）；界面文案进 ARB 与主题（阶段 1）。
+未完项：CI（GitHub Actions）已配置——`.github/workflows/ci.yml` 在 PR 与 push main 上跑本轮全部本地门禁，
+外加依赖治理与密钥扫描；`dependabot.yml` 负责 cargo / pub / Actions 升级 PR。首次真实 runner 运行仍需观察。
+SBOM、签名与发布工作流属阶段 4；数据网格与 SQLite+SQLx 选型验证属阶段 2；界面文案进 ARB 与主题属阶段 1。
 
 ## 许可
 

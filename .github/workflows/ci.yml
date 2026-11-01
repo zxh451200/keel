@@ -1,0 +1,138 @@
+# Keel CI — 阶段 0 交付：门禁可复现 + 依赖治理 + 密钥扫描（需求文档 §7.3、§7.4、§9.1）
+#
+# 供应链约定：
+#   - Action 一律固定到完整 commit SHA（行尾注释标版本号），Dependabot 负责跟进升级。
+#   - 第三方二进制固定版本 + 下载后校验 SHA-256，不固定 URL 的脚本一律不执行。
+#   - 这个工作流只读源码、不持任何发布/签名凭据；签名与发布属于阶段 4 的独立工作流。
+#   - Rust 工具链由仓库根的 rust-toolchain.toml 固定；Flutter 版本在下方 env 固定，
+#     与 AGENTS.md §0 记录的已验证版本一致，升级单独提交并测试。
+#
+# 退出码约定：scripts/security-check.sh 返回 3 表示「无违规但公告库取不到、未完成判定」，
+# 在本工作流里同样判失败（fail closed），不放行。
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.8"
+  FRB_CODEGEN_VERSION: "2.13.0"
+  OSV_SCANNER_VERSION: "2.7.0"
+  # 官方发布物摘要（osv-scanner_SHA256SUMS / gitleaks_checksums.txt 一致口径）
+  OSV_SCANNER_WINDOWS_SHA256: "9964ed64ec9a387391eb4cc006ad5c531154821aef29b793e02c448de4686438"
+  GITLEAKS_VERSION: "8.30.1"
+  GITLEAKS_WINDOWS_SHA256: "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e"
+
+jobs:
+  windows:
+    name: Windows 门禁（构建 / 桥接 / 依赖治理）
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks 需要完整历史
+
+      - name: Rust 工具链（rust-toolchain.toml 固定）
+        run: |
+          rustup show
+          rustup component add rustfmt clippy
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: 记录工具链版本（供应链台账）
+        run: |
+          rustc -vV
+          cargo -V
+          cargo fmt --version
+          cargo clippy --version
+          flutter --version
+
+      - name: Dart 依赖
+        run: flutter pub get
+
+      - name: 桥接生成物可复现
+        run: |
+          cargo install flutter_rust_bridge_codegen --version "${FRB_CODEGEN_VERSION}" --locked
+          flutter_rust_bridge_codegen generate
+          if ! git diff --exit-code -- lib/src/rust rust/src/frb_generated.rs; then
+            echo "::error::生成物与提交不一致：改过 rust/src/api 后必须本地重跑 codegen 并提交生成物（AGENTS.md §10）"
+            git status --short
+            exit 1
+          fi
+
+      - name: Rust 门禁
+        working-directory: rust
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test
+
+      - name: Dart 门禁
+        run: |
+          dart format --set-exit-if-changed lib test integration_test
+          flutter analyze
+          flutter test
+
+      - name: 桥接端到端（真实加载 Rust 动态库）
+        run: flutter test integration_test -d windows
+
+      - name: 依赖治理工具（cargo install --locked，来源 crates.io）
+        working-directory: rust
+        run: cargo install cargo-license cargo-deny cargo-audit --locked
+
+      - name: 固定版本的扫描二进制（校验 SHA-256 后加入 PATH）
+        run: |
+          set -euo pipefail
+          tools="$RUNNER_TEMP/tools"
+          mkdir -p "$tools"
+          curl -sSLf --retry 3 -o "$tools/osv-scanner.exe" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_windows_amd64.exe"
+          printf '%s  %s\n' "$OSV_SCANNER_WINDOWS_SHA256" "$tools/osv-scanner.exe" | sha256sum -c -
+          curl -sSLf --retry 3 -o "$tools/gitleaks.zip" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_windows_x64.zip"
+          printf '%s  %s\n' "$GITLEAKS_WINDOWS_SHA256" "$tools/gitleaks.zip" | sha256sum -c -
+          unzip -q -o "$tools/gitleaks.zip" gitleaks.exe -d "$tools"
+          echo "$tools" >> "$GITHUB_PATH"
+          "$tools/osv-scanner.exe" --version
+          "$tools/gitleaks.exe" version
+
+      - name: 许可证 / 来源 / 重复依赖 / RustSec 公告 / OSV / 密钥扫描
+        run: bash scripts/security-check.sh
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: security-reports
+          path: build/reports/
+          if-no-files-found: warn
+          retention-days: 30
+
+  linux-rust:
+    name: Linux 门禁（Rust 层可移植性冒烟）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Rust 工具链（rust-toolchain.toml 固定）
+        run: |
+          rustup show
+          rustup component add rustfmt clippy
+
+      - name: Rust 门禁
+        working-directory: rust
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test

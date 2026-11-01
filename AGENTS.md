@@ -15,8 +15,12 @@
   3 无违规但公告库取不到、发布不放行）；`THIRD_PARTY_NOTICES` 按依赖包 LICENSE 正文核对（2026-11-01）。
   2026-11-01 为清除 cargo-audit 报出的 yanked/unsound/unmaintained 跑过一次 `cargo update`
   （semver 范围内，tokio 1.34.0 → 1.54.1 等），更新后重跑全部门禁与 Windows 集成测试。
-- 阶段 0 未完项：CI 与 secret scanning、SBOM、OSV-Scanner 尚未配置（远端为 GitHub，CI 形态待确认）；
-  `.gitattributes` 已固定脚本换行符。
+- CI 已落地（GitHub Actions，远端已确定）：`.github/workflows/ci.yml` 两个 job——`windows` 跑全部门禁 +
+  桥接端到端 + `scripts/security-check.sh`，`linux-rust` 跑 Rust 层可移植性冒烟；Action 全部固定到完整
+  commit SHA，osv-scanner 2.7.0 与 gitleaks 8.30.1 按官方发布物 SHA-256 校验后使用，报告作为 artifact 保留 30 天。
+  `.github/dependabot.yml` 覆盖 cargo / pub / github-actions。
+- 阶段 0 未完项：SBOM、签名与发布工作流、Defender 扫描记录属阶段 4 发布流水线；`.gitattributes` 已固定脚本换行符。
+  CI 的 `windows` job 首次在真实 runner 上执行时仍需观察（本机会话无法代跑），失败按 §10 修因不放行。
 - 本机开发注意：`C:\tools\bin\flutter` / `C:\tools\bin\dart` 包装脚本导出 `PUB_HOSTED_URL` 指向清华镜像，
   触发依赖重新解析的命令（本会话是 `flutter pub deps`）会把 `pubspec.lock` 里 35 处 `url:` 从
   `https://pub.dev` 改写成镜像地址（版本号与 sha256 不变）。提交前必须 `git diff pubspec.lock` 复核并
@@ -130,7 +134,8 @@ Flutter UI → lib/api/bridge.dart → FRB 生成接口 → rust/src/api
 ```text
 keel/
 ├─ AGENTS.md  README.md
-├─ .github/workflows/              # CI；托管平台确定前不建（GitLab 则用 .gitlab-ci.yml，不得两套并存）
+├─ .github/workflows/ci.yml          # GitHub Actions（远端已定）：门禁 + 依赖治理 + 密钥扫描；Action 固定到 commit SHA
+├─ .github/dependabot.yml            # cargo / pub / github-actions 升级 PR
 ├─ assets/branding/                # 品牌资源，须在 pubspec 声明
 ├─ docs/                           # REQUIREMENTS.md 产品需求；adr/ 按需
 ├─ lib/

@@ -166,8 +166,14 @@ Flutter/Dart BSD-3-Clause（引擎与包另有清单）；flutter_rust_bridge MI
 ### 7.4 发布阻断条件
 
 - 每次合并/定期：`cargo audit`、`cargo deny`、OSV-Scanner（扫 `Cargo.lock` 与 `pubspec.lock`，作为第二数据源）；例外必须写公告编号、影响分析、负责人、复查日期，不允许无说明长期忽略；secret scanning；`dart pub outdated` 只用于发现更新机会，升级单独提交并测试。
+  现状（2026-11-01）：以上由 `.github/workflows/ci.yml` 在每个 PR 与 push main 上执行；本机实测同一条命令链——
+  cargo-deny 四项判绿、`cargo audit` 在线通过（离线时 `security-check.sh` 返回 3，CI 判失败不放行）、
+  OSV-Scanner 2.7.0 解析 `rust/Cargo.lock`（83 包）与 `pubspec.lock`（42 包）无告警、gitleaks 扫历史无泄漏。
 - 未审核的 Git 依赖、path override、子模块、直接下载二进制建单独清单；发行构建不得默默使用开发机本地覆盖。
 - 工具本身也是供应链：记录 Rust、Flutter/Dart、codegen、打包器、安装器、CI Action 版本；CI Action 尽量固定到完整 commit SHA 并定期复核。
+  现状（2026-11-01）：`ci.yml` 引用的 3 个 Action 已固定到完整 commit SHA（actions/checkout v7.0.1、subosito/flutter-action v2.23.0、actions/upload-artifact v7.0.2），
+  未使用需要 EULA 的 gitleaks Action，改为下载 gitleaks 8.30.1 官方二进制并校验 SHA-256；Flutter 3.47.8、FRB codegen 2.13.0、
+  OSV-Scanner 2.7.0 版本写在 workflow 的 `env`，Rust 由 `rust-toolchain.toml` 固定；`dependabot.yml` 负责提出 SHA 与依赖升级 PR。
 - 发布包只由受控 CI 的受保护分支/标签生成；runner 短生命周期、最小权限；普通 PR 不拿发布凭据/签名私钥/生产密钥；fork/外部贡献在无机密隔离作业构建；发布任务与测试任务分开，仅受保护标签可触发签名与发布；签名私钥不进源码、日志、普通产物。
 - 发行构建记录 commit、工具链、锁文件、工作流、产物哈希；有条件下生成 SBOM（SPDX 或 CycloneDX）与来源证明/attestation；验证 attestation 要核对仓库、工作流、commit、受保护发布身份。
 - 分发：官方渠道 + 版本 + commit + SHA-256 + SBOM + 许可证清单；Windows 规划 Authenticode 签名（证书与时间戳成本单列决策），覆盖 `.exe`、`.dll`、安装器，发布后验证签名与时间戳；用户可用 `signtool verify /pa /v` 与官方哈希比对；不引导用户从网盘/重打包站/聊天附件取包，不因 SmartScreen 提示让用户关 Defender 或忽略未知发布者。
@@ -185,8 +191,8 @@ Flutter/Dart BSD-3-Clause（引擎与包另有清单）；flutter_rust_bridge MI
 | `assets/branding/*` | 品牌图片与图标 | 已入库（10 个文件，约 4.8 MB），但无来源/授权记录，且未在 `pubspec.yaml` 声明、无代码引用 | 原创需注明归属；第三方需附许可与来源；确认取舍后再在 pubspec 声明 |
 | 字体文件 | 未来引入 | 暂无 | 每个字体单独附许可；OFL 字体保留版权行与保留字体名条款 |
 | `rust/Cargo.lock`、`pubspec.lock` | 依赖版本 | 已生成并入库（2026-11-01） | 发行构建只用锁定版本 |
-| SBOM（CycloneDX 或 SPDX） | 构建产物 | 缺失 | 发布流水线生成并随包保留 |
-| `cargo-deny` / OSV / `dart pub deps` 报告 | 审计产物 | 缺失 | 发布前留存；例外必须带编号与到期复查日期 |
+| SBOM（CycloneDX 或 SPDX） | 构建产物 | 缺失，阶段 4 随发布流水线生成 | 发布流水线生成并随包保留 |
+| `cargo-deny` / OSV / `dart pub deps` / gitleaks 报告 | 审计产物 | 已可产出：`scripts/security-check.sh` 写 `build/reports/`，CI 以 `security-reports` artifact 保留 30 天 | 发布前留存；例外必须带编号与到期复查日期 |
 
 - 开发/构建期依赖（`tempfile`、`ffi`、`ffigen`、`flutter_lints` 等）不随发行物，但仍纳入许可审查与自动扫描。
 - `publish_to: none` 只表示不发布到 pub.dev，不豁免许可证与 NOTICE 义务。
