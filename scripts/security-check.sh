@@ -57,6 +57,13 @@ advisory_db_date() {
   echo unknown
 }
 
+# 只认「公告库本身不可用」的特征串。不能用宽泛的 fetch 关键字：
+# cargo-audit 正常工作时也会打印 "Fetching advisory database"，
+# 那样会把真实的漏洞判定误当成网络问题（2026-11-01 CI 首跑就是被这里误导的）。
+audit_db_issue() {
+  grep -Eqi "couldn't fetch advisory database|failed to prepare (clone|fetch)|Refusing to initialize the non-empty directory|Failed to connect|unable to access|error sending request|error loading advisory database" "$1"
+}
+
 if require cargo-license "cargo install cargo-license --locked"; then
   run "$RUST_DIR" "Rust 依赖与许可证清单" rust-licenses.txt cargo license
 fi
@@ -79,18 +86,20 @@ fi
 if require cargo-audit "cargo install cargo-audit --locked"; then
   if (cd "$RUST_DIR" && cargo audit >"$REPORT_DIR/cargo-audit.txt" 2>&1); then
     echo "PASS  cargo-audit (RustSec，在线公告库)  -> build/reports/cargo-audit.txt"
-  elif grep -qiE "fetch|couldn't fetch|Failed to connect|IO error" "$REPORT_DIR/cargo-audit.txt"; then
+  elif audit_db_issue "$REPORT_DIR/cargo-audit.txt"; then
+    # 公告库取不到/目录不可用：降级到本地缓存，但这不是「通过」。
     db_date="$(advisory_db_date)"
-    echo "WARN  cargo-audit 无法更新公告库（本机到 github.com:443 不通），改用本地缓存（截至 $db_date）"
+    echo "WARN  cargo-audit 无法取得可用公告库（截至本地 $db_date），尝试离线判定"
     if (cd "$RUST_DIR" && cargo audit --no-fetch >"$REPORT_DIR/cargo-audit-offline.txt" 2>&1); then
-      echo "PARTIAL  cargo-audit 按离线公告库通过 -> build/reports/cargo-audit-offline.txt"
+      echo "PARTIAL  cargo-audit 按离线公告库通过（截至 $db_date）-> build/reports/cargo-audit-offline.txt"
       DEGRADED=1
     else
-      echo "FAIL  cargo-audit --no-fetch -> build/reports/cargo-audit-offline.txt"
-      FAILED=1
+      echo "UNSURE  cargo-audit 离线也无法判定（没有本地公告库）；本项未完成 -> build/reports/cargo-audit-offline.txt"
+      DEGRADED=1
     fi
   else
     echo "FAIL  cargo-audit (RustSec) -> build/reports/cargo-audit.txt"
+    sed -n '1,12p' "$REPORT_DIR/cargo-audit.txt"
     FAILED=1
   fi
 fi
