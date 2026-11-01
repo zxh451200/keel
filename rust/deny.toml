@@ -12,7 +12,9 @@ all-features = true
 
 [advisories]
 db-urls = ["https://github.com/rustsec/advisory-db"]
-db-path = "~/.cargo/advisory-db"
+# 不要自定义 db-path：cargo-deny 的默认目录（$CARGO_HOME/advisory-dbs）与 cargo-audit 的
+# ~/.cargo/advisory-db 分开。曾把这里设成后者，CI 里 deny 先跑就会让目录变成
+# 「非空但 cargo-audit 不认」，cargo-audit 报 "Refusing to initialize the non-empty directory"。
 git-fetch-with-cli = true
 ignore = [
   # 格式：#{ id = "RUSTSEC-0000-0000", reason = "公告编号 + 影响分析 + 负责人 + 复查日期" },
