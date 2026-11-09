@@ -441,7 +441,8 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                     final tokens = UiTokens.of(context);
                     return Scrollbar(
                       controller: _horizontal,
-                      thumbVisibility: true,
+                      // 内容放得下时不常显：否则会画出一条铺满整轨的假滚动条。
+                      thumbVisibility: tableWidth > constraints.maxWidth,
                       notificationPredicate: (n) =>
                           n.metrics.axis == Axis.horizontal,
                       child: SingleChildScrollView(
@@ -520,9 +521,10 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
         ],
       ),
     );
-    // 高度不足时整页滚动，避免把表格挤到不可用；正常窗口保持原布局。
-    // 窄宽度下页脚会换成两行，最小布局高度比其它页多留一点。
-    return UiScrollablePage(minExtent: 720, child: content);
+    // 高度不足时整页滚动，避免把表格挤到不可用；窄宽度下操作条和页脚都会
+    // 折成多行，兜底高度比其它页多留一点。宽页面不会触发，避免与表格自身的
+    // 滚动条叠成双层滚动。
+    return UiScrollablePage(narrowMinExtent: 720, child: content);
   }
 
   Widget _footer(

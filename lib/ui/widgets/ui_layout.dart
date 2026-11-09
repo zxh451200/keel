@@ -84,27 +84,38 @@ class UiPanel extends StatelessWidget {
   }
 }
 
-/// 整页滚动兜底：窗口高度不足时让页面滚动，并按 [minExtent] 布局内容。
+/// 整页滚动兜底：窗口高度不足时让页面滚动，并按 [narrowMinExtent] 布局内容。
 ///
-/// 高 DPI 下的最小窗口（1280×720 @200% = 640×360）去掉外壳后只剩一百多像素，
-/// 固定页头 + 多行筛选项会把表格挤成 RenderFlex 溢出。高度够时行为不变。
+/// 页面主体（表格/列表）本身已经是滚动区，整页滚动条只在固定部分（页头 +
+/// 筛选/操作条）摆不下时才有意义。固定部分的高度随宽度变化：窄页面上按钮
+/// 会折成多行，需要更早回退；宽页面在 420 以上就能安全让主体自己滚动。
+/// 阈值设得过高（曾用 640）会让 1280×720 @125% 这类常见窗口也出现整页滚动条，
+/// 与主体滚动条叠成双层滚动。
 class UiScrollablePage extends StatelessWidget {
   const UiScrollablePage({
     super.key,
     required this.child,
-    this.minExtent = 640,
+    this.narrowMinExtent = 640,
   });
 
+  /// 回退时的布局高度，同时是窄页面的回退阈值。沿用回退引入时的安全值，
+  /// 保证 640×360 不溢出；操作条会折成多行的页面传更大的值。
+  final double narrowMinExtent;
   final Widget child;
-  final double minExtent;
+
+  static const double _wideMinExtent = 420;
+  static const double _widePageWidth = 760;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxHeight >= minExtent) return child;
+        final threshold = constraints.maxWidth >= _widePageWidth
+            ? _wideMinExtent
+            : narrowMinExtent;
+        if (constraints.maxHeight >= threshold) return child;
         return SingleChildScrollView(
-          child: SizedBox(height: minExtent, child: child),
+          child: SizedBox(height: narrowMinExtent, child: child),
         );
       },
     );

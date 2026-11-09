@@ -741,12 +741,18 @@ class _AuditTableState extends State<_AuditTable> {
                   final endWidth = _paneWidth(end);
                   final bodyViewport =
                       constraints.maxWidth - startWidth - endWidth;
+                  // 冻结列各有独立纵向滚动视图，只让最右侧可见分栏显示一条
+                  // 纵向滚动条，否则相邻分栏会并排出现多条。
+                  final startBar = end.isEmpty && body.isEmpty;
+                  final bodyBar = end.isEmpty && body.isNotEmpty;
+                  final endBar = end.isNotEmpty;
 
                   Widget pane(
                     List<_AuditColumn> columns,
                     ScrollController vertical, {
                     bool horizontal = false,
                     bool keyed = false,
+                    bool showScrollBar = false,
                   }) {
                     final width = _paneWidth(columns);
                     final rows = Column(
@@ -769,7 +775,7 @@ class _AuditTableState extends State<_AuditTable> {
                           ),
                       ],
                     );
-                    final content = Column(
+                    Widget content = Column(
                       children: [
                         _HeaderRow(
                           accent: header.accent,
@@ -788,22 +794,30 @@ class _AuditTableState extends State<_AuditTable> {
                         ),
                       ],
                     );
+                    if (!showScrollBar) {
+                      content = ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context)
+                            .copyWith(scrollbars: false),
+                        child: content,
+                      );
+                    }
                     if (!horizontal) {
                       return SizedBox(width: width, child: content);
                     }
+                    final contentWidth = width > bodyViewport
+                        ? width
+                        : bodyViewport;
                     return Expanded(
                       child: RawScrollbar(
                         controller: _horizontal,
-                        thumbVisibility: true,
+                        // 内容放得下时不常显：否则会画出一条铺满整轨的假滚动条。
+                        thumbVisibility: contentWidth > bodyViewport,
                         notificationPredicate: (n) =>
                             n.metrics.axis == Axis.horizontal,
                         child: SingleChildScrollView(
                           controller: _horizontal,
                           scrollDirection: Axis.horizontal,
-                          child: SizedBox(
-                            width: width > bodyViewport ? width : bodyViewport,
-                            child: content,
-                          ),
+                          child: SizedBox(width: contentWidth, child: content),
                         ),
                       ),
                     );
@@ -812,9 +826,15 @@ class _AuditTableState extends State<_AuditTable> {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      pane(start, _startVertical),
-                      pane(body, _vertical, horizontal: true, keyed: true),
-                      pane(end, _endVertical),
+                      pane(start, _startVertical, showScrollBar: startBar),
+                      pane(
+                        body,
+                        _vertical,
+                        horizontal: true,
+                        keyed: true,
+                        showScrollBar: bodyBar,
+                      ),
+                      pane(end, _endVertical, showScrollBar: endBar),
                     ],
                   );
                 },
