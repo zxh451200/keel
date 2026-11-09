@@ -2,7 +2,7 @@
 
 核对日期：2026-11-09（按当前源码与最近实跑重扫，见下方 2026-11-08 / 2026-11-09 增量与「台账复核更正」；逐项验收记录继续按其实际证据关闭）。依据 [产品需求](REQUIREMENTS.md)、当前源码、测试源码、工作流与已有手工检查清单。本文跟踪需求剩余工作，不新增功能范围；需求章节号均指 REQUIREMENTS。§12 为参考来源，无独立实现项。
 
-**源码已写 ≠ 生成完成 ≠ 编译完成 ≠ 测试通过 ≠ 平台验收通过。** 2026-11-08 起本机补齐工具链并实跑；2026-11-09 最新一轮：FRB/l10n 正常生成、`python -B scripts/check_sources.py` 严格模式 PASS（本次复核再次 exit 0）、Rust fmt/clippy/test 全绿（26 个测试二进制，172 项通过，其中 lib 95 项）、`flutter analyze` 0 项、`flutter test` 188 项通过、`integration-check.ps1 -Device windows` **7/7 entry PASS**（新增桌面交互/内存入口）、Windows Debug/Release 构建成功（详见下方增量与更正节）。2026-11-08 记录的 105 项 / 5 entry 是当时快照（entry 集合后来新增了 `auth` 与 `interaction_memory`）。旧记录中的 PASS 只属于当时快照；下表中的专项运行、性能、DPI/读屏、Linux 和发布证据须独立关闭，不从 Windows 构建或本机门禁结果推导。本轮新改动也不自动继承此前构建结论。
+**源码已写 ≠ 生成完成 ≠ 编译完成 ≠ 测试通过 ≠ 平台验收通过。** 2026-11-08 起本机补齐工具链并实跑；2026-11-09 最新一轮：FRB/l10n 正常生成、`python -B scripts/check_sources.py` 严格模式 PASS（本次复核再次 exit 0）、Rust fmt/clippy/test 全绿（26 个测试二进制，173 项通过，其中 lib 95 项）、`flutter analyze` 0 项、`flutter test` 200 项通过（含网格语义断言 5 项）、`integration-check.ps1 -Device windows` **7/7 entry PASS**（含桌面交互/内存入口，含语义标签的最终树）、Windows Debug 构建成功（Release 需在发布门禁重跑，详见下方增量与更正节）。2026-11-08 记录的 105 项 / 5 entry 是当时快照（entry 集合后来新增了 `auth` 与 `interaction_memory`）。旧记录中的 PASS 只属于当时快照；下表中的专项运行、性能、DPI/读屏、Linux 和发布证据须独立关闭，不从 Windows 构建或本机门禁结果推导。本轮新改动也不自动继承此前构建结论。
 
 台账状态含义：
 
@@ -21,7 +21,7 @@
 |---|---|---|---|
 | G01 | 锁文件已有；本机扫描已跑，CI 联网复核待办 | `pubspec.lock` / `Cargo.lock` / `THIRD_PARTY_NOTICES` 在库；本机 `scripts/security-check.sh` 在公告库取不到时为 INCOMPLETE(exit 3)，网络恢复后同一脚本端到端 PASS(exit 0，9 项检查全 PASS)；两个网格 POC 的传递包逐包读 LICENSE 正文均通过。旧表述"许可与扫描证据尚未取得""Windows 构建是此前版本的历史基线"只属 2026-11-08 之前的快照，已被上述本机结果覆盖 | 仍须在 CI 联网环境对**当前**锁文件复跑 audit/deny/OSV/secret scanning 并留证；逐版本核 LICENSE 正文/传递依赖、NOTICE 和 §7.2；新增/变更依赖重新解析并复核，旧扫描结果不覆盖新依赖；POC 包许可不等于生产引入后的完整 NOTICE。 |
 | G02 | 本机已关闭；干净检出/CI 再生成一致性待验证 | 2026-11-08 本机实跑 FRB codegen 与 `flutter gen-l10n`，补齐 11 个生成缺口（9 函数 wrapper + `audit_export_history`/`grid_preferences` 两 module）；`python -B scripts/check_sources.py` 严格模式 PASS，2026-11-09 复核仍 exit 0。原表述"当前 `check_sources.py` 默认退出 1""生成待补"只属 2026-11-08 之前的快照 | 公开 API/ARB 变更后仍须用固定兼容版本 FRB codegen 与 `flutter gen-l10n` 重生成，并在干净检出/CI 核对无非预期差异；禁止手补生成区。本轮新建的 `poc/grid_columns_trina` 只有包内独立锁，不影响根锁与根生成物。 |
-| G03 | Windows 本机已跑，CI/平台证据待补 | 2026-11-09 本机：cargo fmt/clippy/test 全绿（26 个测试二进制、172 项通过，lib 95 项）、`flutter analyze` 0 项、`flutter test` 188 项、`integration-check.ps1 -Device windows` **7/7 PASS**（新增 `interaction_memory_test`，真实窗口按键与 RSS 采样）、Windows Debug/Release 构建成功；`scripts/verify.ps1`、`scripts/integration-check.ps1`、`ci.yml` 入口在库但从未在真实 runner 执行 | 在 CI/目标平台用同一组命令重跑并保留日志与失败修复结果；DPI/读屏矩阵、Linux 桌面、打印/系统对话框专项仍 NOT RUN。离线 `check_sources.py --allow-pending-generation` 仅是资源/导入/依赖名检查。 |
+| G03 | Windows 本机已跑，CI/平台证据待补 | 2026-11-09 本机：cargo fmt/clippy/test 全绿（26 个测试二进制、173 项通过，lib 95 项）、`flutter analyze` 0 项、`flutter test` 200 项、`integration-check.ps1 -Device windows` **7/7 PASS**（新增 `interaction_memory_test`，真实窗口按键与 RSS 采样）、Windows Debug 构建成功（Release 待发布门禁重跑）；`scripts/verify.ps1`、`scripts/integration-check.ps1`、`ci.yml` 入口在库但从未在真实 runner 执行 | 在 CI/目标平台用同一组命令重跑并保留日志与失败修复结果；DPI/读屏矩阵、Linux 桌面、打印/系统对话框专项仍 NOT RUN。离线 `check_sources.py --allow-pending-generation` 仅是资源/导入/依赖名检查。 |
 
 以下所有“待验证”功能均继承 G01～G03，不在每行重复全部命令。
 
@@ -249,14 +249,16 @@
   Ctrl+K 浮层期间按键不穿透、Esc 关闭后 ↓ 恢复生效；关闭标签后按键不误触其他页；
   备份页 ↑/↓ 选择、Enter 弹出恢复确认、Cancel 后 `pendingRestore()==null`、Esc 清选后 Enter 不再弹框。
   未使用真实系统剪贴板。
-- **P02 采样**：5 轮“打开审计（筛选/翻页）→ 关闭 → 打开备份/诊断 → 关闭”，
-  RSS 611.6 / 628.2 / 651.1 / 669.6 / 673.4 / 673.2 MB，首末增量 61.6 MB（58.7 MiB），maxRss 725.3 MB；
-  5 轮无异常、无遗留 busy、末轮可重开并选行。debug 构建 + 种子数据，仅作回归护栏，不是生产基线。
+- **P02 采样**（2026-11-09 含语义标签的最终树复跑）：5 轮“打开审计（筛选/翻页）→ 关闭 → 打开备份/诊断 → 关闭”，
+  RSS 584.1 / 600.9 / 623.3 / 624.4 / 636.1 / 631.5 MiB，首末增量 49.7 MB（47.4 MiB），maxRss 683.5 MiB；
+  5 轮无异常、无遗留 busy、末轮可重开并选行。debug 构建 + 种子数据，仅作回归护栏，不是生产基线；
+  接入批次首跑序列为 633.9 → 678.6 MB（+42.6 MiB），RSS 随运行波动。
 - **门禁**：`integration-check.ps1 -Device windows` **7/7 PASS**
-  （`build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json`，09:41–10:05 UTC，
-  接入 trina_grid 后的最终树；native 构建包含 trina 传递依赖注册的 `jni` FFI 插件）；
-  首轮曾因用例自身页边界/焦点假设失败（`...897859ec...`，simple_test NOT_RUN），修复后重跑通过，
-  不是环境抖动。`flutter analyze` 0、format 0、根 `flutter test` 186 项全过。
+  （`build/reports/integration-windows-13451c161d1641c9901e7d31f22c1422/summary.json`，14:22–14:35 UTC，
+  含网格语义标签的最终树；native 构建包含 trina 传递依赖注册的 `jni` FFI 插件）；
+  接入批次首跑为 `...504db0d2...`（11:12–11:24 UTC），首轮曾因用例自身页边界/焦点假设失败
+  （`...897859ec...`，simple_test NOT_RUN），修复后重跑通过，不是环境抖动。
+  `flutter analyze` 0、format 0、根 `flutter test` 200 项全过。
 - **边界**：RSS 为 Flutter debug 引擎常驻 + 测试种子；隐藏页长任务、Release 构建、CPU/订阅计数、
   Linux 与 DPI/读屏仍未覆盖。Ctrl+W 快捷键只在焦点位于外壳子树内时到达（点工具条按钮后
   primaryFocus 在外壳外的路由 FocusScope），已记录，未改产品行为。
@@ -278,10 +280,25 @@
   横向手写滚动移除，改由网格内部处理；空/加载/错误态与页脚不变。
 - **测试**：原 15 项全部保留（仅首项增加 `TrinaGrid` 存在断言），新增 Shift+方向键锚点扩展、
   Home/End 行首末 2 项；根 `flutter test` **188 项全过**，`analyze` 0、`format` 0 差异。
-- **边界**：本阶段不做单元格内联编辑与区域粘贴（编辑仍走既有对话框）；网格把当前行视为选中，
+- **1M 规模实测（数据/服务层）**：`rust/tests/customer_scale_test.rs` 以真实 SQLite 种子 100 万行后调用 `services::customer::list`：种子 13.78 s；首页 166.8 ms；末页（第 20000 页）325.5 ms；编号精确关键词 1.84 s；启用计数 320.6 ms；名称降序首页 162.8 ms。默认 `#[ignore]`（避免每次套件写约 100 MB 临时库），用 `cargo test --locked --test customer_scale_test -- --ignored --nocapture` 显式运行；不覆盖 UI 渲染与平台验收。
+- **内联编辑与区域粘贴（同批已接）**：`code/name/phone/email` 可在网格内直接编辑，失败回滚该格并提示；Ctrl+V 从当前格起把 TSV 块写入四个可编辑列，整段经新增 `update_customers` 一次事务提交，超 1 MiB/越界/只读/空剪贴板不写入。kind/status/笔记仍走对话框。
+- **边界**：网格把当前行视为选中，
   Ctrl 点击当前行取消选中的旧行为退化为无变化（无测试覆盖）；审计页仍是自绘冻结列表格；
   真实 DPI/读屏/暗色观感与 Win/Linux 平台矩阵仍 NOT RUN。trina 缺陷 6/7 的绕法已按 POC 落实
   （快捷键按默认表过滤后插入；取页错误由页面自行处理，本页为普通分页无惰性取页）。
+
+## 2026-11-09 网格语义树断言（U04）
+
+- **改动**：trina 单元格没有显式 Semantics，数据靠内部 `Text` 隐式暴露；往来单位网格外层加
+  `Semantics(container: true, label: t.navCustomers)` 区域标签（复用现有 ARB 键，无新文案）。
+- **测试**：新增 `test/ui/customers_grid_semantics_test.dart` 5 项（`ensureSemantics` +
+  `find.bySemanticsLabel`）：区域/表头/单元格值进入语义树且区域节点非空壳、隐藏内部列
+  （备注、原始 kind）不泄漏、只读角色与管理员暴露同样的数据标签、中文界面标签随语言切换、
+  翻页后旧行标签移除新行出现。灵敏度已验证：临时移除区域标签时首项即失败，随后恢复。
+- **门禁**：`flutter analyze` 0 项、`flutter test` **200 项全过**（195 → +5）、
+  `check_sources.py` PASS、改动文件 format 无差异。Rust 未改，未重跑 cargo 门禁。
+- **边界**：这是语义树层面的自动化回归，**不是读屏验收**——Narrator/Orca 的实际朗读顺序、
+  焦点遍历与网格选中态播报仍 NOT RUN（X06）；trina 不暴露行选中语义，未伪造该断言。
 
 ## 外部条件阻塞清单（发布与平台，仓库内代码不能自证）
 
@@ -296,7 +313,7 @@
 | X03 | Defender / SmartScreen 记录 | 外部条件（干净机器、时间） | 无扫描记录；`WINDOWS_RELEASE_CHECKS.md` 全表 NOT_EXECUTED | 干净普通用户环境安装运行，记录 Defender 引擎/版本/范围/结果与候选包哈希；SmartScreen 信誉需真实分发积累，"扫描未检出"不等于安全 |
 | X04 | 远端标签保护（ruleset） | 外部条件（仓库设置） | 本地 git 副本（`f554b64` 基线、`e3cf57d` POC 批次）无法核对远端；`release.yml` 由 `v*` 标签触发 | 在远端仓库配置 tag protection/ruleset 并留证据；本地文件不能证明已落实 |
 | X05 | Linux 发行形态、打包与桌面验收（B03） | 产品决策 + 外部条件（缺目标机器/runner） | 无 `packaging/` 目录；`linux-desktop` CI job 从未真实执行；`LINUX_DESKTOP_CHECKS.md` 为 NOT_EXECUTED | 决定 deb/AppImage/tar 等形式与依赖策略，在目标发行版完成构建、启动、文件选择、托盘/退出与冒烟；本机为 Windows，无法代跑 |
-| X06 | Windows 真机交互验收（U02 退出、U04 DPI/读屏/多屏） | 外部条件（需人工桌面会话） | 自动化已覆盖布局不溢出与命令可达；`DESKTOP_EXIT_CHECKS.md` 与 DPI 矩阵仍为 NOT_EXECUTED | 在 1280×720/1366×768/1920×1080、100–200% 缩放下人工执行叉号/Alt+F4/隐藏页草稿/多屏迁移/读屏与焦点顺序；自动化不能替代 |
+| X06 | Windows 真机交互验收（U02 退出、U04 DPI/读屏/多屏） | 外部条件（需人工桌面会话） | 自动化已覆盖布局不溢出、命令可达与网格语义树断言（非读屏验收）；`DESKTOP_EXIT_CHECKS.md` 与 DPI 矩阵仍为 NOT_EXECUTED | 在 1280×720/1366×768/1920×1080、100–200% 缩放下人工执行叉号/Alt+F4/隐藏页草稿/多屏迁移/读屏与焦点顺序；自动化不能替代 |
 | X07 | 干净环境安装/升级/卸载 | 外部条件（依赖 X05/X01） | 当前仅有 ZIP 候选（`build/release/keel-windows-v0.1.0-local`，15.6 MB，未签名） | 在无开发 SDK 的机器完成安装、升级、卸载与残留检查；ZIP 可运行不关闭该项 |
 | X08 | 公告库完整安全扫描 | 外部条件（网络） | 本机 `security-check.sh` 为 INCOMPLETE(exit 3)：RustSec 公告库取不到；`unknown` 继续阻断 | 在可联网 CI 重跑 audit/deny/OSV 并钉定同一 revision；离线降级不得当作通过 |
 | X09 | CI 真实 runner 首跑 | 外部条件（平台） | `ci.yml` / `release.yml` 从未在 GitHub Actions 执行，本机无法代跑 | 真实 runner 首次全绿并保留日志；YAML 与步骤断言不代替执行 |
@@ -320,7 +337,7 @@ revision 复跑"的解除条件不变。两者都仍为开放的外部条件。
 |---|---|---|
 | V01「当前工作区未发现 `integration_test/current_api_test.dart`」 | 该 entry 存在；2026-11-08 更正时为 5 个 entry（audit_page / current_api / export_history_api / grid_store / simple），全部 PASS。2026-11-09 新增 `auth_test.dart` 与 `interaction_memory_test.dart` 后为 **7 个 entry**，最近一轮 `-Device windows` 7/7 PASS（见 §9 表 V01 行） | Linux 桌面逐 entry 执行、原生对话框/跨进程重启/性能泄漏的端到端证据 |
 | 用户 JSONL 导入「未接产品导入界面，公开调用尚无取消句柄」 | `rust/src/api/users.rs` 已暴露 `prepare_user_import` / `run_user_import` / `cancel_user_import` / `user_import_progress`；`lib/ui/pages/users_page.dart` 经 `showUserImportDialog` 打开 `lib/ui/pages/user_import_dialog.dart`（进度条 + 取消按钮 + 取消失败/已取消文案）；`test/ui/user_import_controller_test.dart`、`test/ui/user_import_dialog_test.dart` 已存在 | 真实大文件/失败注入/取消竞争的平台执行证据；跨配置与 SQLite 事务、归档（ZIP）导入仍未实现 |
-| T01 / F02「生产审计表未实现真正冻结列、列设置未完成」 | `lib/ui/pages/audit_page.dart` 已按 `GridFrozen.start/none/end` 分三段面板渲染并同步纵向滚动；列显隐/宽度/顺序/冻结经 `showGridColumnSettingsDialog` 编辑，`lib/features/grid/grid_column_preferences_provider.dart` 的 `RustGridColumnLayoutStore` 走 Rust 用户隔离 CAS 存储（`rust/src/api/grid_preferences.rs`、`rust/tests/grid_preferences_test.rs`）。隔离 POC 已补单元格/区域复制 TSV、编辑与粘贴校验、分页与行虚拟化（`docs/GRID_POC.md` 2026-11-08 节）。2026-11-09 已锁定 trina_grid 2.4.0，往来单位示例页改用网格（`lib/ui/pages/customers_page.dart`），编辑仍走对话框 | 审计页仍为自绘冻结列整页建行，是否迁移待下一批；单元格内联编辑/区域粘贴仍未接生产；§6 平台矩阵（真实 OS 按键焦点、进程内存、Win/Linux、DPI）仍开放 |
+| T01 / F02「生产审计表未实现真正冻结列、列设置未完成」 | `lib/ui/pages/audit_page.dart` 已按 `GridFrozen.start/none/end` 分三段面板渲染并同步纵向滚动；列显隐/宽度/顺序/冻结经 `showGridColumnSettingsDialog` 编辑，`lib/features/grid/grid_column_preferences_provider.dart` 的 `RustGridColumnLayoutStore` 走 Rust 用户隔离 CAS 存储（`rust/src/api/grid_preferences.rs`、`rust/tests/grid_preferences_test.rs`）。隔离 POC 已补单元格/区域复制 TSV、编辑与粘贴校验、分页与行虚拟化（`docs/GRID_POC.md` 2026-11-08 节）。2026-11-09 已锁定 trina_grid 2.4.0，往来单位示例页改用网格（`lib/ui/pages/customers_page.dart`），并接入 code/name/phone/email 内联编辑与区域粘贴（`update_customers` 原子批量） | 审计页仍为自绘冻结列整页建行，是否迁移待下一批；§6 平台矩阵（真实 OS 按键焦点、进程内存、Win/Linux、DPI）仍开放 |
 | F04「外部诊断输入完整流程尚未完成」 | `rust/src/api/diagnostics.rs` 已有 `prepare_external_diagnostic_text` / `prepare_external_diagnostic_file`；`lib/ui/pages/diagnostics/external_diagnostic_dialog.dart` 经服务 `prepareText` / `prepareFile` 接入文本与原生文件选择，`test/ui/external_diagnostic_test.dart` 已存在 | 两平台真实文件选择、路径/链接拒绝、TTL/单次消费与泄漏回归的执行证据 |
 | 打印「未接预览、授权与 busy 界面流程」 | `lib/features/audit/ui/audit_print_actions.dart` 的 `printAuditPageFromView` 已接审计页按钮与 Ctrl+P（`lib/ui/pages/audit_page.dart`），`lib/api/desktop_print.dart` 为平台通道，`test/ui/audit_print_test.dart`、`test/desktop_print_test.dart` 已存在 | 仅覆盖审计当前页纯文本；两平台真打印、取消、Unicode/分页、驱动与退出证据；其他页面打印范围未定义 |
 | I02「独立业务时区、货币仍未实现」 | 配置 v5 已有独立 `time_zone` / `currency`；`lib/ui/shell.dart` 视图菜单提供时区（系统/UTC）与币种（未指定/CNY/USD/EUR/GBP/JPY）选择，`lib/core/state/regional_settings_provider.dart` 与 `rust/tests/regional_preferences_test.rs` 已接 | 金额精度/舍入与 DST 业务语义仍待产品决策；系统区域/DST 平台事件实测；RTL 未实现 |
@@ -490,7 +507,7 @@ Windows既有构建验证仍有效，但不覆盖这批改动。
 | U01 / §2.1–2.2 视觉布局 | 待验证、部分待实现、需平台证据 | Flutter Theme、菜单/工具栏/导航/标签/状态栏已有；工具栏横向滚动，活动提示可换行 | 完整设计令牌尚待整理；验证主题贯穿所有页面/对话框、信息密度、窄窗口命令可访问，不以已有 Material 控件推断视觉验收通过。 |
 | U02 / §2.3 关闭与退出 | 待验证、需平台证据 | `workspace_shell.dart`、`workspace_page.dart`、用户草稿与各 busy 守卫；AppLifecycleListener 接可取消退出；未改 native `SetQuitOnClose` | 执行 [退出清单](DESKTOP_EXIT_CHECKS.md)，覆盖普通叉号/Alt+F4、隐藏页草稿、批量关闭、并发确认/标签快照变化、导入/导出/备份 busy。强杀和不可取消退出无保障。 |
 | U03 / §2.3 键盘与资源 | 部分验证、需平台证据 | `test/core/`、`test/features/` 有焦点、关闭守卫、复制、搜索、导出轮询等回归源码；2026-11-09 新增 Windows 真实窗口集成入口 `integration_test/interaction_memory_test.dart`：审计表 ↓/↑/End/Home/Esc 选择与复制按钮联动、Ctrl+K 浮层期间按键不穿透且 Esc 关闭后恢复、切页/关页后按键不误触；备份页 ↑/↓ 选择、Enter 弹恢复确认、Cancel 不登记、Esc 清选后 Enter 不再弹框。以可观察按钮可用性与行高亮断言，未用真实剪贴板 | 隐藏页禁用焦点/动画、关闭释放控制器/Provider/计时器/订阅仍须在目标桌面按 P02 循环执行；OS 读屏/多屏/焦点顺序未验；Ctrl+W 仅在外壳焦点子树内生效（工具条按钮点击后 primaryFocus 在外壳外）已实测记录，未改产品行为 |
-| U04 / §2.4 DPI | 自动化覆盖已有，平台证据仍缺 | `test/ui/shell_dpi_test.dart` 实跑 5 项：1280×720 / 1366×768 / 1920×1080 × 100/125/150/200% 十二种组合、200% 文本缩放、640×360 最小逻辑窗口的页面搜索与打开页面、深浅主题；`test/ui/audit_page_test.dart` 增加 200% 文本缩放用例。本轮据此修复两处真实溢出（首页状态 pill 在 640×360 溢出 23px，审计页筛选区在 200% 文本下把表格压到 53px，改为高文本缩放下筛选区限高滚动、页脚摘要省略） | 仍需目标机实测：最大化/缩小/拖动/多屏迁移、长英文/德文与字体回退、高对比度、辅助技术（读屏）语义与焦点顺序、真实 DPI 缩放下的截图；自动化只覆盖布局不溢出与关键命令可达。 |
+| U04 / §2.4 DPI | 自动化覆盖已有，平台证据仍缺 | `test/ui/shell_dpi_test.dart` 实跑 5 项：1280×720 / 1366×768 / 1920×1080 × 100/125/150/200% 十二种组合、200% 文本缩放、640×360 最小逻辑窗口的页面搜索与打开页面、深浅主题；`test/ui/audit_page_test.dart` 增加 200% 文本缩放用例。本轮据此修复两处真实溢出（首页状态 pill 在 640×360 溢出 23px，审计页筛选区在 200% 文本下把表格压到 53px，改为高文本缩放下筛选区限高滚动、页脚摘要省略） | 仍需目标机实测：最大化/缩小/拖动/多屏迁移、长英文/德文与字体回退、高对比度、辅助技术（读屏）语义与焦点顺序、真实 DPI 缩放下的截图；自动化覆盖布局不溢出、关键命令可达，以及 2026-11-09 新增的网格语义树断言（5 项，见上方专节；不等于读屏验收）。 |
 
 ## §3 国际化
 
@@ -515,13 +532,13 @@ Windows既有构建验证仍有效，但不覆盖这批改动。
 | 编号 | 状态 | 当前依据 | 剩余项/证据 |
 |---|---|---|---|
 | P01 审计 CSV | 待验证、部分待实现、需平台证据 | `rust/src/services/audit_export.rs`、`data/audit.rs`、`lib/features/audit/` 已实现固定快照、流式分批、100,000 行/64 MiB、权限/所有者、CSV 防护、进度/取消/清理、单飞轮询和关闭保护；`save_audit_export_copy`、Win COM/Linux GTK 选择器、Dart copy provider/面板入口及持久历史 API 也已有源码 | FRB/l10n、Rust/Flutter 测试和两平台执行仍待完成。须实测普通源文件/64 MiB、本地绝对 CSV 目标、同目录 hard link 发布、链接/重解析点拒绝、文件锁/权限/清理、TTL/身份/授权复查、取消竞争和原生对话框生命周期；祖先目录并发替换 TOCTOU 与另存审计无共同事务仍是边界。验证入口：`cargo test --test audit_export_test --manifest-path rust/Cargo.toml`、`cargo test --test audit_export_history_test --manifest-path rust/Cargo.toml`、`flutter test test/ui/tasks_page_test.dart test/ui/current_activities_test.dart`、`pwsh -File scripts/integration-check.ps1 -Device windows`。源码存在不表示 CSV 行为或平台门禁已通过。 |
-| P02 生命周期与测量 | Windows 已取证、Linux/DPI 需平台证据 | 2026-11-09 Windows 真实窗口集成入口 `interaction_memory_test.dart`（接入 trina_grid 后重跑）：同一进程 5 轮“打开审计→筛选→翻页→关闭→打开备份/诊断→关闭”，RSS 序列 611.6 → 628.2 → 651.1 → 669.6 → 673.4 → 673.2 MB，首末增量 61.6 MB（58.7 MiB，maxRss 725.3 MB），5 轮全部完成、无遗留 busy、末轮可重开并选行；隔离临时数据目录，debug 构建，阈值为只防失控的 300 MB | 隐藏页长任务、真实 Release 构建、CPU 与订阅/任务计数、Linux 与 DPI/读屏矩阵仍 NOT RUN；RSS 含 Flutter debug 引擎、trina 依赖与测试种子（120 往来单位/1 备份），不能当作生产内存基线。报告：`build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json` 与 `interaction_memory_test.log` |
+| P02 生命周期与测量 | Windows 已取证、Linux/DPI 需平台证据 | 2026-11-09 Windows 真实窗口集成入口 `interaction_memory_test.dart`（含网格语义标签的最终树复跑）：同一进程 5 轮“打开审计→筛选→翻页→关闭→打开备份/诊断→关闭”，RSS 序列 584.1 → 600.9 → 623.3 → 624.4 → 636.1 → 631.5 MiB，首末增量 49.7 MB（47.4 MiB，maxRss 683.5 MiB），5 轮全部完成、无遗留 busy、末轮可重开并选行；隔离临时数据目录，debug 构建，阈值为只防失控的 300 MB | 隐藏页长任务、真实 Release 构建、CPU 与订阅/任务计数、Linux 与 DPI/读屏矩阵仍 NOT RUN；RSS 含 Flutter debug 引擎、trina 依赖与测试种子（120 往来单位/1 备份），不能当作生产内存基线。报告：`build/reports/integration-windows-13451c161d1641c9901e7d31f22c1422/summary.json` 与 `interaction_memory_test.log` |
 
 ## §6 数据网格 POC
 
 | 编号 | 状态 | 当前依据 | 剩余项/证据 |
 |---|---|---|---|
-| T01 | 部分实现、需平台证据、外部条件（查询层基准、POC 交互门禁与候选同用例对比已完成，见上方 2026-11-08 / 2026-11-09 增量） | Rust 用户隔离/CAS 布局 API 与 Flutter `RustGridColumnLayoutStore` 已接通；生产审计表已实现 start/body/end 冻结列渲染与列设置持久化；两个隔离 POC（`poc/grid_columns` pluto_grid 8.1.0、`poc/grid_columns_trina` trina_grid 2.4.0）用同一套用例对比并实跑两轮：本机 **trina 62 通过 / 0 skip、pluto 54 通过 + 2 skip**，两包 analyze 0 项、format 无差异，覆盖范围复制 TSV、粘贴合法/非法、1M 行单页物化与虚拟化、翻页替换、只读拒绝、5 项缺陷探针与 7 项 FluentApp 宿主用例（含 pluto 无 Material 祖先时编辑失败）；`scripts/grid_poc.py` 查询基准已实跑 10k/100k/1M | 仍未关闭：真实 OS 焦点与键盘矩阵、进程内存/CPU 与生命周期稳定性、Windows/Linux 桌面与 DPI/读屏、锁定版本的完整 NOTICE 与 security-check、目标 Linux 冒烟。**已锁定 trina_grid 2.4.0**（ADR-012；缺陷 5 已修、原生校验钩子可用、Fluent 宿主无需 Material 壳；代价是 +52 生产传递包，缺陷 1/2/4 仍需同样绕行、缺陷 6/7 需按其固定绕法）。根 `pubspec.yaml` 已加入该依赖并重解锁文件；往来单位示例页已改用网格行选择/虚拟滚动/快捷键，审计页仍为自绘冻结列表格，单元格内联编辑与区域粘贴仍只在 POC。详见 `docs/GRID_POC.md` 2026-11-09 节与 `build/reports/grid-poc-trina-20261109.md`。查询层与 widget 级结果不能关闭桌面验收。 |
+| T01 | 部分实现、需平台证据、外部条件（查询层基准、POC 交互门禁与候选同用例对比已完成，见上方 2026-11-08 / 2026-11-09 增量） | Rust 用户隔离/CAS 布局 API 与 Flutter `RustGridColumnLayoutStore` 已接通；生产审计表已实现 start/body/end 冻结列渲染与列设置持久化；两个隔离 POC（`poc/grid_columns` pluto_grid 8.1.0、`poc/grid_columns_trina` trina_grid 2.4.0）用同一套用例对比并实跑两轮：本机 **trina 62 通过 / 0 skip、pluto 54 通过 + 2 skip**，两包 analyze 0 项、format 无差异，覆盖范围复制 TSV、粘贴合法/非法、1M 行单页物化与虚拟化、翻页替换、只读拒绝、5 项缺陷探针与 7 项 FluentApp 宿主用例（含 pluto 无 Material 祖先时编辑失败）；`scripts/grid_poc.py` 查询基准已实跑 10k/100k/1M | 仍未关闭：真实 OS 焦点与键盘矩阵、进程内存/CPU 与生命周期稳定性、Windows/Linux 桌面与 DPI/读屏、锁定版本的完整 NOTICE 与 security-check、目标 Linux 冒烟。**已锁定 trina_grid 2.4.0**（ADR-012；缺陷 5 已修、原生校验钩子可用、Fluent 宿主无需 Material 壳；代价是 +52 生产传递包，缺陷 1/2/4 仍需同样绕行、缺陷 6/7 需按其固定绕法）。根 `pubspec.yaml` 已加入该依赖并重解锁文件；往来单位示例页已改用网格行选择/虚拟滚动/快捷键，并接入 code/name/phone/email 内联编辑与 Ctrl+V 区域粘贴（一次事务），另有语义树断言 5 项（区域标签/数据暴露/隐藏列不泄漏/语言切换，非读屏验收）；审计页仍为自绘冻结列表格。详见 `docs/GRID_POC.md` 2026-11-09 节与 `build/reports/grid-poc-trina-20261109.md`。查询层、1M 规模测试与 widget 级结果不能关闭桌面验收。 |
 
 ## §7 依赖、许可证与供应链
 
@@ -544,7 +561,7 @@ Windows既有构建验证仍有效，但不覆盖这批改动。
 
 | 编号/需求 | 状态 | 当前依据 | 剩余项/证据 |
 |---|---|---|---|
-| V01 / §9.1 真实 FRB | Windows 本机已关闭、Linux 需平台证据 | `integration_test/` 现为 **7 个 entry**（audit_page / auth / current_api / export_history_api / grid_store / interaction_memory / simple）；`scripts/integration-check.ps1 -Device windows` 于 2026-11-09 在接入 trina_grid 后的最终代码上 **7/7 PASS**，报告 `build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json`（09:41–10:05 UTC，独立进程、owned 临时目录、真实加载 Rust 动态库；native 构建包含 `jni` FFI 插件）。更早的 6/6（`...791dca6e...`）与 5/5（`...8662d97c...`）分别是当时 6 / 5 entry 的快照 | Linux 桌面 job 逐 entry 执行仍为 NOT_EXECUTED；集成条目覆盖启动、审计/登录/桥接/网格/最小窗口与桌面按键/RSS，但**未点按**备份恢复执行、诊断导出、导入设置命令，native 文件对话框/打印、跨进程重启恢复、DPI/读屏的端到端证据保持开放。CI 真实 runner 首跑结果须单独取得，不由本机结果推导。 |
+| V01 / §9.1 真实 FRB | Windows 本机已关闭、Linux 需平台证据 | `integration_test/` 现为 **7 个 entry**（audit_page / auth / current_api / export_history_api / grid_store / interaction_memory / simple）；`scripts/integration-check.ps1 -Device windows` 于 2026-11-09 在含网格语义标签的最终代码上 **7/7 PASS**，报告 `build/reports/integration-windows-13451c161d1641c9901e7d31f22c1422/summary.json`（14:22–14:35 UTC，独立进程、owned 临时目录、真实加载 Rust 动态库；native 构建包含 `jni` FFI 插件）；接入批次首跑为 `...504db0d2...`。更早的 6/6（`...791dca6e...`）与 5/5（`...8662d97c...`）分别是当时 6 / 5 entry 的快照 | Linux 桌面 job 逐 entry 执行仍为 NOT_EXECUTED；集成条目覆盖启动、审计/登录/桥接/网格/最小窗口与桌面按键/RSS，但**未点按**备份恢复执行、诊断导出、导入设置命令，native 文件对话框/打印、跨进程重启恢复、DPI/读屏的端到端证据保持开放。CI 真实 runner 首跑结果须单独取得，不由本机结果推导。 |
 | V02 / §9.2–9.3 POC与放行 | 待验证、部分待实现、需平台证据 | Rust SQLite测试、Flutter widget测试和错误/退出/导入/导出回归已有源码，部分POC功能仍缺 | 完成前述各行与§6；实跑启动/重启、多标签、列表/基础编辑、批量导入进度取消、故障诊断、脱敏、语言/格式、Windows干净Release、Linux桌面。保留关键迁移/备份恢复可重复结果，不能据测试文件数量宣称达标。 |
 | V03 / §9.3 二开与兼容 | 待验证、部分待实现 | [EXTENDING](EXTENDING.md) 已有新增页面/命令/关闭守卫指南及审计列表、用户编辑样例 | 非原作者在干净环境按指南构建并新增列表/编辑页；明确公共API与升级迁移说明并做样例兼容回归，特别是诊断prepare/export、DiagnosticEventQuery、format_locale、导航和配置文件准备接口。 |
 | V04 / §10 阶段结论 | 待验证、待实现 | 阶段0有历史样例结果，阶段1–3已有交叉实现，阶段4有候选脚本 | 当前不宣布任一新增阶段整体完成：阶段0补 CI 联网复跑的当前依赖/生成/门禁；阶段1补UI/生命周期证据；阶段2列配置/冻结列与两个 POC 的候选对比已有，但候选锁定与生产接线未定、平台矩阵未跑；阶段3补通用表单/业务导入导出/二开验收；阶段4补平台与发布独立门禁。 |

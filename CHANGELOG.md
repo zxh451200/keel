@@ -7,6 +7,13 @@ All notable changes to Keel are documented here. This project follows
 
 ### Added
 
+- A localized region label on the customer grid plus semantics-tree regression
+  tests (region/header/cell exposure, hidden-column non-leak, localization).
+  Widget-level only: this is not screen-reader acceptance.
+- Inline editing for code/name/phone/email and atomic TSV region paste on the
+  customer grid, backed by a new transaction-scoped batch update API.
+- A manual 1M-row customer scale harness (`customer_scale_test`, run with
+  `--ignored`) recording page/filter/sort timings.
 - `trina_grid 2.4.0` selected as the production data grid after the same-case
   POC comparison; the customer list now uses its row selection, virtual
   scrolling and shortcut handling while editing stays in the existing dialogs.

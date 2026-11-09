@@ -4,16 +4,27 @@
 
 ## 0. 当前状态（先读，别假设）
 
+- 2026-11-09 网格语义树断言：trina 单元格无显式 Semantics（数据靠内部 Text 隐式暴露），
+  往来单位网格外层加 `Semantics(container: true, label: t.navCustomers)` 区域标签（复用现有
+  ARB 键）。新增 `test/ui/customers_grid_semantics_test.dart` 5 项：区域/表头/单元格进入语义树、
+  隐藏内部列（备注/原始 kind）不泄漏、只读角色同等暴露、中文标签随语言切换、翻页换行；
+  灵敏度已验证（临时移除标签即失败）。门禁实跑：`flutter analyze` 0 项、`flutter test`
+  **200 项全过**（195 → +5）、`check_sources.py` PASS、format 无差异。Rust 未改，未重跑 cargo 门禁。
+  这是语义树层面回归，**不是读屏验收**；Narrator/Orca 朗读与焦点顺序仍 NOT RUN（X06）。
+
 - 2026-11-09 网格锁定与首个生产接线：根依赖加入 `trina_grid: 2.4.0`（MIT，ADR-012），
   根锁由 pub.dev 重解为 110 项（102 hosted，新增 52 包：MIT/BSD-3-Clause/Apache-2.0，
   无 copyleft/未知；`jni` 被注册为 Windows/Linux 的 FFI 插件）。往来单位示例页
-  （`lib/ui/pages/customers_page.dart`）改用网格行选择/虚拟滚动/快捷键，编辑仍走对话框，
-  Ctrl/Shift 多选、TSV 复制、只读角色、分页与最小窗口行为由测试固定；单元格内联编辑与
-  区域粘贴仍未接生产。`flutter test` **188 项全过**，analyze 0、format 0；
-  `integration-check.ps1 -Device windows` 在接入后的最终树上 **7/7 PASS**
-  （`build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json`，
-  09:41–10:05 UTC，native 构建含 `jni` FFI 插件）。平台矩阵（真实 OS 焦点/DPI/读屏/Linux）
-  仍 NOT RUN。
+  （`lib/ui/pages/customers_page.dart`）改用网格行选择/虚拟滚动/快捷键；`code/name/phone/email`
+  支持单元格内联编辑与 Ctrl+V 区域粘贴（整段经新增 `update_customers` 一次事务提交），
+  kind/status/备注仍走对话框。Ctrl/Shift 多选、TSV 复制、只读角色、分页与最小窗口行为由测试固定；
+  `flutter test` **200 项全过**（含同批语义断言），analyze 0、format 0；Rust `cargo test` 173 项（含批量更新回归）。
+  1M 行客户表分页/过滤/排序有手工规模测试（`rust/tests/customer_scale_test.rs`，默认 ignored，
+  用 `--ignored` 显式运行）。
+  `integration-check.ps1 -Device windows` 在含语义标签的最终树上 **7/7 PASS**
+  （`build/reports/integration-windows-13451c161d1641c9901e7d31f22c1422/summary.json`，
+  14:22–14:35 UTC，native 构建含 `jni` FFI 插件；此前 11:12 的 504db0d2 是接入批次快照）。
+  平台矩阵（真实 OS 焦点/DPI/读屏/Linux）仍 NOT RUN。
 
 - 2026-11-09 页面滚动结构修正：审计 / 备份 / 诊断 / 登录保护 / 往来单位共用的 `UiScrollablePage`
   原先回退阈值固定 640（往来单位显式 720），在 1280×720 @125%（页面可用高度约 440）就会触发整页
@@ -40,9 +51,11 @@
   `integration_test/interaction_memory_test.dart`，在真实窗口 + 真实 Rust 库下验证
   审计表 ↓/↑/End/Home/Esc 选择、Ctrl+K 浮层按键不穿透且 Esc 后恢复、关闭标签后按键不误触，
   以及备份页选择/Enter 确认/Cancel/Esc 行为（用按钮可用性与行高亮断言，不动真实剪贴板）；
-  同进程 5 轮打开-筛选-翻页-关闭-重开采样 RSS（接入 trina 后）：611.6→628.2→651.1→669.6→673.4→673.2 MB，
-  首末 +58.7 MiB，无遗留 busy、末轮可重开。`integration-check.ps1 -Device windows` **7/7 PASS**
-  （`build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json`）。
+  同进程 5 轮打开-筛选-翻页-关闭-重开采样 RSS（接入 trina 后，2026-11-09 复跑）：
+  584.1→600.9→623.3→624.4→636.1→631.5 MiB，首末 +47.4 MiB，无遗留 busy、末轮可重开。
+  `integration-check.ps1 -Device windows` **7/7 PASS**
+  （`build/reports/integration-windows-13451c161d1641c9901e7d31f22c1422/summary.json`，
+  14:22–14:35 UTC；接入批次的首跑为 504db0d2，RSS 序列随运行波动）。
   边界：RSS 为 debug 构建 + 测试种子，隐藏页长任务、CPU/订阅计数、Linux 与 DPI/读屏仍 NOT RUN；
   Ctrl+W 仅在外壳焦点子树内生效（点工具条后焦点在外壳外）已记录，未改行为。
 

@@ -216,11 +216,14 @@ Fluent 宿主同仪结果（第二轮，widget 级）：渲染/懒取页、深�
 **当前结论（2026-11-09 更新）**：对比门禁（同一用例跑两者）已完成并作出选择——
 **已锁定 `trina_grid 2.4.0`**（ADR-012），生产 `pubspec.yaml` 已加入该依赖，根锁由 pub.dev
 重解为 110 项（102 hosted，新增 52 包，MIT/BSD-3/ Apache-2.0，无 copyleft/未知）。
-首个生产接线为往来单位示例页：网格承担行选择、虚拟滚动、键盘与快捷键，编辑仍走既有对话框；
+首个生产接线为往来单位示例页：网格承担行选择、虚拟滚动、键盘与快捷键；`code/name/phone/email` 支持单元格内联编辑与 Ctrl+V 区域粘贴（整段一次事务），kind/status/备注仍走对话框；
 行选择/复制/只读/分页/RTL/最小窗口行为由 `test/ui/customers_page_test.dart` 覆盖。
+语义层面（2026-11-09）：trina 单元格没有显式 Semantics，网格外层补本地化区域标签，
+`test/ui/customers_grid_semantics_test.dart` 5 项固定区域/表头/单元格暴露、隐藏列不泄漏与
+语言切换；这是语义树回归，不替代读屏验收（Narrator/Orca 仍 NOT RUN）。
 **锁定不等于平台验收通过**：真实 OS 焦点与窗口、进程内存/CPU、DPI/读屏、Linux 冒烟与
 1 万/10 万/100 万端到端仍按 `docs/IMPLEMENTATION_STATUS.md` 的 U03/P02/T01 行取证；
-单元格内联编辑与区域粘贴仍在 POC，后续批次接入生产。
+1M 行客户表的分页/过滤/排序由 `rust/tests/customer_scale_test.rs` 手工规模测试取证（默认 ignored）。
 
 ## 第二批独立编辑与导入 fixture 契约
 
