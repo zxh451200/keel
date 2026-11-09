@@ -283,6 +283,10 @@ Future<int> createCustomerInRust(SaveCustomerRequest request) async =>
 Future<void> updateCustomerInRust(int id, SaveCustomerRequest request) =>
     updateCustomer(id: id, request: request);
 
+/// 区域粘贴：一次提交多行，Rust 侧整批事务（任一失败全部回滚）。
+Future<int> updateCustomersInRust(List<CustomerUpdate> updates) async =>
+    await updateCustomers(updates: updates);
+
 Future<int> deleteCustomersInRust(List<int> ids) async =>
     await deleteCustomers(ids: frb.Int64List.fromList(ids));
 

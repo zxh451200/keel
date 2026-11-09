@@ -41,6 +41,9 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
   /// 页面回写网格选中态时置位，用来忽略网格自己的回调，避免递归。
   bool _syncing = false;
 
+  /// 单元格编辑提交中：并发提交会被挡下，单元格回滚到旧值。
+  bool _cellSaving = false;
+
   /// 网格快捷键；覆盖项见 [_buildShortcut]。
   late final TrinaGridShortcut _shortcut = _buildShortcut();
 
@@ -139,7 +142,10 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
 
   /// 把 `_selected` / `_cursor` 回写到网格：当前行由网格光标表示，
   /// 其余选中行用行选择集合表示（网格始终把当前行算作选中）。
-  void _syncGridSelection() {
+  ///
+  /// [keepColumn] 用于同一行内的列切换：此时只补回行高亮，不把光标拉回
+  /// 编号列，否则单元格编辑与区域粘贴永远只能落在第一列。
+  void _syncGridSelection({bool keepColumn = false}) {
     final grid = _grid;
     final cursor = _cursor;
     if (grid == null || cursor == null || cursor >= _items.length) return;
@@ -147,9 +153,11 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     _syncing = true;
     try {
       grid.clearCurrentSelecting(notify: false);
-      final cell = grid.refRows[cursor].cells[_codeField];
-      if (cell != null && !grid.isCurrentCell(cell)) {
-        grid.setCurrentCell(cell, cursor, notify: false);
+      if (!keepColumn) {
+        final cell = grid.refRows[cursor].cells[_codeField];
+        if (cell != null && !grid.isCurrentCell(cell)) {
+          grid.setCurrentCell(cell, cursor, notify: false);
+        }
       }
       for (final index in _selected) {
         if (index != cursor && index < grid.refRows.length) {
@@ -158,7 +166,8 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       }
       grid.notifyListeners();
       // 键盘扩展选择时把光标行滚进视口（网格自己的移动动作也会做这件事）。
-      if (grid.scroll.vertical != null &&
+      if (!keepColumn &&
+          grid.scroll.vertical != null &&
           grid.scroll.bodyRowsVertical != null) {
         grid.moveScrollByRow(TrinaMoveDirection.down, cursor);
       }
@@ -252,15 +261,27 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final index = event.idx;
     if (index < 0 || index >= _items.length) return;
     if (_cursor == index) {
-      // 同一行内的列切换不改选择，但网格已经清掉了行选择集合，补回高亮。
-      _syncGridSelection();
+      // 同一行内的列切换不改选择，但网格已经清掉了行选择集合，补回高亮
+      // 并保留刚移动到的列（否则编辑与粘贴只能落在编号列）。
+      _syncGridSelection(keepColumn: true);
       return;
     }
     _select(index);
   }
 
+  /// 正在编辑单元格时，trina 已在按键分发前提交了值；这里只退出编辑态，
+  /// 不再打开对话框，避免同一次提交与弹窗并行。
+  bool _leaveCellEditing() {
+    final grid = _grid;
+    if (grid == null || grid.isEditing != true) return false;
+    grid.setEditing(false);
+    _syncGridSelection(keepColumn: true);
+    return true;
+  }
+
   void _enterKey() {
     if (_busy) return;
+    if (_leaveCellEditing()) return;
     final items = _selectedItems();
     if (items.length != 1 || !_canManage) return;
     _openEditor(items.single);
@@ -274,6 +295,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
 
   void _escapeKey() {
     if (_busy) return;
+    if (_leaveCellEditing()) return;
     setState(_clearSelection);
   }
 
@@ -351,6 +373,11 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
         const SingleActivator(LogicalKeyboardKey.keyC, meta: true): _GridAction(
           _copySelection,
         ),
+        // 内置粘贴会强解包且不限大小，这里整块换成页面自己的粘贴。
+        const SingleActivator(LogicalKeyboardKey.keyV, control: true):
+            _PasteAction(_pasteFromClipboard),
+        const SingleActivator(LogicalKeyboardKey.keyV, meta: true):
+            _PasteAction(_pasteFromClipboard),
         const SingleActivator(LogicalKeyboardKey.home):
             const TrinaGridActionMoveCellFocusToEdge(TrinaMoveDirection.up),
         const SingleActivator(LogicalKeyboardKey.end):
@@ -373,6 +400,190 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
   void _extendToLast() => _extendTo(_items.length - 1);
   void _extendUp() => _extendBy(-1);
   void _extendDown() => _extendBy(1);
+
+  /// 可编辑列里某一字段的“原值”；只读列返回 null。
+  static String? _fieldOf(CustomerItem item, String field) => switch (field) {
+    _codeField => item.code,
+    _nameField => item.name,
+    _phoneField => item.phone,
+    _emailField => item.email,
+    _ => null,
+  };
+
+  /// 用该行隐藏列里的原值（类型/启用/备注）拼一份完整请求；不变字段保留原值。
+  /// 校验规则只在 Rust 边界执行，这里不做本地复制。
+  static SaveCustomerRequest _requestFor(
+    CustomerItem item,
+    Map<String, String> overrides,
+  ) => SaveCustomerRequest(
+    code: overrides[_codeField] ?? item.code,
+    name: overrides[_nameField] ?? item.name,
+    kind: item.kind,
+    phone: overrides[_phoneField] ?? item.phone,
+    email: overrides[_emailField] ?? item.email,
+    active: item.active,
+    note: item.note,
+  );
+
+  /// 单格提交失败或不允许时把格子退回旧值（不触发 onChanged，避免递归）。
+  void _revertCell(TrinaGridOnChangedEvent event) {
+    final grid = _grid;
+    if (grid == null || !event.cell.initialized) return;
+    if (!grid.refRows.contains(event.row)) return;
+    grid.changeCellValue(
+      event.cell,
+      event.oldValue,
+      callOnChangedEvent: false,
+      force: true,
+    );
+    // 编辑器还挂着时要让输入框也回到旧值：否则关闭编辑器时 trina 会把
+    // 输入框内容当成新一次改动再提交一遍。
+    final text = event.oldValue?.toString();
+    final controller = grid.textEditingController;
+    if (text != null && controller != null) {
+      controller.value = TextEditingValue(
+        text: text,
+        selection: TextSelection.collapsed(offset: text.length),
+      );
+    }
+  }
+
+  /// 单元格提交（Enter、失焦或换格时由 trina 触发一次）。
+  /// 与创建/编辑对话框同样一次提交一整条记录；失败回滚该格并提示。
+  void _onGridChanged(TrinaGridOnChangedEvent event) {
+    final field = event.column.field;
+    if (!_editableFields.contains(field)) return;
+    final index = _indexOfRow(event.row);
+    if (index == null) {
+      _revertCell(event);
+      return;
+    }
+    final item = _items[index];
+    final next = event.value?.toString() ?? '';
+    // Esc 取消编辑时 trina 会先把值还原再回调；没有真实变化就不提交。
+    if (next == _fieldOf(item, field)) return;
+    if (!_canManage || _busy || _cellSaving) {
+      _revertCell(event);
+      return;
+    }
+    _cellSaving = true;
+    _submitCellEdit(item, event, {
+      field: next,
+    }).whenComplete(() => _cellSaving = false);
+  }
+
+  Future<void> _submitCellEdit(
+    CustomerItem item,
+    TrinaGridOnChangedEvent event,
+    Map<String, String> overrides,
+  ) async {
+    final t = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(customerWriterProvider)
+          .update(item.id, _requestFor(item, overrides));
+      if (!mounted) return;
+      // 成功后刷新整页（保留当前页与选择）；网格重建后显示规范化后的值。
+      refreshCustomers(ref);
+    } catch (error) {
+      if (!mounted) return;
+      _revertCell(event);
+      showToast(context, errorText(t, error), severity: InfoBarSeverity.error);
+    }
+  }
+
+  /// 区域粘贴：从当前单元格起把 TSV 块写进可编辑列，整批一次事务提交。
+  /// 解析与范围检查都在写入前完成，失败不碰任何单元格。
+  Future<void> _pasteFromClipboard(TrinaGridStateManager grid) async {
+    if (_busy || !_canManage || grid.isEditing == true) return;
+    final start = grid.currentCell;
+    if (start == null || !start.initialized) return;
+    final row = start.row;
+    final pageIndex = _indexOfRow(row);
+    if (pageIndex == null) return;
+    final startIndex = _editableFields.indexWhere(
+      (field) => identical(row.cells[field], start),
+    );
+    var t = AppLocalizations.of(context);
+    if (startIndex < 0) {
+      showToast(
+        context,
+        t.customersPasteOutOfRange,
+        severity: InfoBarSeverity.error,
+      );
+      return;
+    }
+    String? text;
+    try {
+      text = (await Clipboard.getData(Clipboard.kTextPlain))?.text;
+    } catch (_) {
+      text = null;
+    }
+    if (!mounted) return;
+    if (text == null || text.isEmpty) return;
+    t = AppLocalizations.of(context);
+    if (text.length > _pasteMaxBytes) {
+      showToast(
+        context,
+        t.customersPasteTooLarge,
+        severity: InfoBarSeverity.error,
+      );
+      return;
+    }
+    final block = TrinaClipboardTransformation.stringToList(
+      text,
+      cellSeparator: '\t',
+    );
+    // Excel 复制常带一个尾部换行，纯空行不算数据。
+    while (block.isNotEmpty && block.last.every((cell) => cell.isEmpty)) {
+      block.removeLast();
+    }
+    if (block.isEmpty) return;
+    var columns = 1;
+    for (final line in block) {
+      if (line.length > columns) columns = line.length;
+    }
+    if (startIndex + columns > _editableFields.length) {
+      showToast(
+        context,
+        t.customersPasteOutOfRange,
+        severity: InfoBarSeverity.error,
+      );
+      return;
+    }
+    if (pageIndex + block.length > _items.length) {
+      showToast(
+        context,
+        t.customersPasteOutOfPage,
+        severity: InfoBarSeverity.error,
+      );
+      return;
+    }
+    final updates = <CustomerUpdate>[];
+    for (var r = 0; r < block.length; r += 1) {
+      final item = _items[pageIndex + r];
+      final overrides = <String, String>{};
+      for (var c = 0; c < block[r].length; c += 1) {
+        overrides[_editableFields[startIndex + c]] = block[r][c];
+      }
+      updates.add(
+        CustomerUpdate(id: item.id, request: _requestFor(item, overrides)),
+      );
+    }
+    setState(() => _busy = true);
+    try {
+      final count = await ref.read(customerWriterProvider).updateMany(updates);
+      if (!mounted) return;
+      refreshCustomers(ref);
+      showToast(context, t.customersPasted(count));
+    } catch (error) {
+      if (!mounted) return;
+      // 事务由 Rust 保证原子性；失败时网格保持原样，等成功再刷新。
+      showToast(context, errorText(t, error), severity: InfoBarSeverity.error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   /// 制表符分隔；公式前缀加单引号，避免电子表格把内容当公式执行。
   String _tsvCell(String value) {
@@ -639,7 +850,14 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                         icon: FluentIcons.search,
                         message: t.customersEmpty,
                       )
-                    : _buildGrid(t, theme, filter, value, formatInstant),
+                    : _buildGrid(
+                        t,
+                        theme,
+                        filter,
+                        value,
+                        formatInstant,
+                        canManage,
+                      ),
               ),
             ),
           ),
@@ -659,6 +877,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     CustomerFilter filter,
     CustomerPage data,
     String Function(int epochMs) formatInstant,
+    bool canManage,
   ) {
     final tokens = UiTokens.of(context);
     final textScale = MediaQuery.textScalerOf(context).scale(13) / 13;
@@ -707,6 +926,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       String field,
       double width, {
       bool hide = false,
+      bool editable = false,
       TrinaColumnRenderer? renderer,
     }) => TrinaColumn(
       title: title,
@@ -714,9 +934,13 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       type: TrinaColumnType.text(),
       width: width,
       hide: hide,
-      // 本页不做单元格内联编辑：编辑一律走对话框。
-      readOnly: true,
-      enableEditingMode: false,
+      // 网格创建后列属性不随重建更新，所以“能不能改”放在回调里按需判定：
+      // 只读角色、页面忙、单格提交中都不允许进入编辑。
+      readOnly: !editable,
+      enableEditingMode: editable,
+      checkReadOnly: editable
+          ? (row, cell) => !canManage || _busy || _cellSaving
+          : null,
       enableSorting: false,
       enableColumnDrag: false,
       enableContextMenu: false,
@@ -727,107 +951,125 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
       renderer: renderer,
     );
 
-    return TrinaGrid(
-      // 查询、页码、数据或界面语言变化都重建网格，避免旧选中态与旧文案残留。
-      key: ValueKey((
-        filter.keyword,
-        filter.kind,
-        filter.active,
-        filter.page,
-        Localizations.localeOf(context),
-        data,
-      )),
-      mode: TrinaGridMode.normal,
-      columns: [
-        column(
-          t.customersColCode,
-          _codeField,
-          _codeWidth,
-          renderer: _textRenderer(theme.typography.bodyStrong),
-        ),
-        column(
-          t.customersColName,
-          _nameField,
-          _nameWidth,
-          renderer: _textRenderer(body),
-        ),
-        column(
-          t.customersColKind,
-          _kindField,
-          _kindWidth,
-          renderer: _textRenderer(body),
-        ),
-        column(
-          t.customersColContact,
-          _contactField,
-          _contactWidth,
-          renderer: _textRenderer(muted),
-        ),
-        column(
-          t.customersColStatus,
-          _statusField,
-          _statusWidth,
-          renderer: (context) {
-            final isActive = context.row.cells[_activeField]?.value == true;
-            return _cellText(
-              context,
-              body?.copyWith(color: isActive ? activeColor : body.color),
-            );
-          },
-        ),
-        column(
-          t.customersColUpdated,
-          _updatedField,
-          _updatedWidth,
-          renderer: _textRenderer(
-            theme.typography.caption?.copyWith(color: tokens.secondaryText),
+    // trina 的单元格没有显式 Semantics，数据靠内部 Text 隐式暴露；
+    // 这里给整块网格一个可读的区域名，读屏进入时先知道这是什么列表。
+    return Semantics(
+      container: true,
+      label: t.navCustomers,
+      child: TrinaGrid(
+        // 查询、页码、数据、权限或界面语言变化都重建网格，避免旧选中态、
+        // 旧文案或旧的只读判定残留。
+        key: ValueKey((
+          filter.keyword,
+          filter.kind,
+          filter.active,
+          filter.page,
+          canManage,
+          Localizations.localeOf(context),
+          data,
+        )),
+        mode: TrinaGridMode.normal,
+        columns: [
+          column(
+            t.customersColCode,
+            _codeField,
+            _codeWidth,
+            editable: true,
+            renderer: _textRenderer(theme.typography.bodyStrong),
           ),
-        ),
-        // 仅供选中映射与状态着色的隐藏列。
-        column(_idField, _idField, 80, hide: true),
-        column(_activeField, _activeField, 80, hide: true),
-      ],
-      rows: [
-        for (final item in data.items)
-          TrinaRow<dynamic>(
-            cells: {
-              _idField: TrinaCell(value: item.id),
-              _activeField: TrinaCell(value: item.active),
-              _codeField: TrinaCell(value: item.code),
-              _nameField: TrinaCell(value: item.name),
-              _kindField: TrinaCell(value: kindLabel(t, item.kind)),
-              _contactField: TrinaCell(
-                value: item.phone.isNotEmpty
-                    ? item.phone
-                    : item.email.isNotEmpty
-                    ? item.email
-                    : '—',
-              ),
-              _statusField: TrinaCell(
-                value: item.active ? t.customersActive : t.customersInactive,
-              ),
-              _updatedField: TrinaCell(value: formatInstant(item.updatedAt)),
+          column(
+            t.customersColName,
+            _nameField,
+            _nameWidth,
+            editable: true,
+            renderer: _textRenderer(body),
+          ),
+          column(
+            t.customersColKind,
+            _kindField,
+            _kindWidth,
+            renderer: _textRenderer(body),
+          ),
+          column(
+            t.customersColPhone,
+            _phoneField,
+            _phoneWidth,
+            editable: true,
+            renderer: _textRenderer(muted),
+          ),
+          column(
+            t.customersColEmail,
+            _emailField,
+            _emailWidth,
+            editable: true,
+            renderer: _textRenderer(muted),
+          ),
+          column(
+            t.customersColStatus,
+            _statusField,
+            _statusWidth,
+            renderer: (context) {
+              final isActive = context.row.cells[_activeField]?.value == true;
+              return _cellText(
+                context,
+                body?.copyWith(color: isActive ? activeColor : body.color),
+              );
             },
           ),
-      ],
-      configuration: TrinaGridConfiguration(
-        shortcut: _shortcut,
-        style: style,
-        selectingMode: TrinaGridSelectingMode.row,
-        // 列宽按比例铺满，与原先 Expanded 伸缩列的手感一致。
-        columnSize: const TrinaGridColumnSizeConfig(
-          autoSizeMode: TrinaAutoSizeMode.scale,
+          column(
+            t.customersColUpdated,
+            _updatedField,
+            _updatedWidth,
+            renderer: _textRenderer(
+              theme.typography.caption?.copyWith(color: tokens.secondaryText),
+            ),
+          ),
+          // 仅供选中映射、编辑/粘贴拼请求与状态着色的隐藏列。
+          column(_idField, _idField, 80, hide: true),
+          column(_activeField, _activeField, 80, hide: true),
+          column(_noteField, _noteField, 120, hide: true),
+          column(_kindRawField, _kindRawField, 80, hide: true),
+        ],
+        rows: [
+          for (final item in data.items)
+            TrinaRow<dynamic>(
+              cells: {
+                _idField: TrinaCell(value: item.id),
+                _activeField: TrinaCell(value: item.active),
+                _noteField: TrinaCell(value: item.note),
+                _kindRawField: TrinaCell(value: item.kind),
+                _codeField: TrinaCell(value: item.code),
+                _nameField: TrinaCell(value: item.name),
+                _kindField: TrinaCell(value: kindLabel(t, item.kind)),
+                _phoneField: TrinaCell(value: item.phone),
+                _emailField: TrinaCell(value: item.email),
+                _statusField: TrinaCell(
+                  value: item.active ? t.customersActive : t.customersInactive,
+                ),
+                _updatedField: TrinaCell(value: formatInstant(item.updatedAt)),
+              },
+            ),
+        ],
+        configuration: TrinaGridConfiguration(
+          shortcut: _shortcut,
+          style: style,
+          selectingMode: TrinaGridSelectingMode.row,
+          // 列宽按比例铺满，与原先 Expanded 伸缩列的手感一致。
+          columnSize: const TrinaGridColumnSizeConfig(
+            autoSizeMode: TrinaAutoSizeMode.scale,
+          ),
         ),
+        onLoaded: (event) {
+          if (!mounted) return;
+          _grid = event.stateManager;
+          event.stateManager.setSelectingMode(TrinaGridSelectingMode.row);
+          // 语言/主题等引起的重建也要恢复选中态。
+          if (_selected.isNotEmpty) _syncGridSelection();
+        },
+        onSelected: _onGridSelected,
+        onActiveCellChanged: _onGridActiveCellChanged,
+        onChanged: _onGridChanged,
       ),
-      onLoaded: (event) {
-        if (!mounted) return;
-        _grid = event.stateManager;
-        event.stateManager.setSelectingMode(TrinaGridSelectingMode.row);
-        // 语言/主题等引起的重建也要恢复选中态。
-        if (_selected.isNotEmpty) _syncGridSelection();
-      },
-      onSelected: _onGridSelected,
-      onActiveCellChanged: _onGridActiveCellChanged,
     );
   }
 
@@ -927,19 +1169,29 @@ String kindLabel(AppLocalizations t, String kind) => switch (kind) {
 const _codeWidth = 150.0;
 const _nameWidth = 240.0;
 const _kindWidth = 110.0;
-const _contactWidth = 240.0;
+const _phoneWidth = 160.0;
+const _emailWidth = 200.0;
 const _statusWidth = 90.0;
 const _updatedWidth = 150.0;
 
-/// 行字段名：隐藏列只用于把网格行映射回 `_items` 与状态着色。
+/// 区域粘贴的上限；与外部输入 1 MiB 的约定一致（按字符数近似字节）。
+const _pasteMaxBytes = 1 << 20;
+
+/// 行字段名：隐藏列只用于把网格行映射回 `_items`、拼完整请求与状态着色。
 const _idField = 'id';
 const _activeField = 'active';
+const _noteField = 'note';
+const _kindRawField = 'kindRaw';
 const _codeField = 'code';
 const _nameField = 'name';
 const _kindField = 'kind';
-const _contactField = 'contact';
+const _phoneField = 'phone';
+const _emailField = 'email';
 const _statusField = 'status';
 const _updatedField = 'updated';
+
+/// 单元格可编辑块（也是区域粘贴能落到的列）。
+const _editableFields = [_codeField, _nameField, _phoneField, _emailField];
 
 /// 把网格快捷键直接接到页面方法上，不经过网格自己的编辑/复制逻辑。
 class _GridAction extends TrinaGridShortcutAction {
@@ -952,6 +1204,19 @@ class _GridAction extends TrinaGridShortcutAction {
     required TrinaKeyManagerEvent keyEvent,
     required TrinaGridStateManager stateManager,
   }) => _run();
+}
+
+/// 区域粘贴：拿网格状态定位起始单元格，再交给页面做范围检查与整批提交。
+class _PasteAction extends TrinaGridShortcutAction {
+  const _PasteAction(this._run);
+
+  final void Function(TrinaGridStateManager stateManager) _run;
+
+  @override
+  void execute({
+    required TrinaKeyManagerEvent keyEvent,
+    required TrinaGridStateManager stateManager,
+  }) => _run(stateManager);
 }
 
 class _CustomerDialog extends ConsumerStatefulWidget {

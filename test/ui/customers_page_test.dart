@@ -40,16 +40,67 @@ void main() {
   late List<CustomerQuery> queries;
   late List<SaveCustomerRequest> creates;
   late List<(int, SaveCustomerRequest)> updates;
+  late List<List<CustomerUpdate>> batchUpdates;
   late List<List<int>> deletes;
   late List<(List<int>, bool)> activeCalls;
   late List<String?> clipboard;
   late List<CustomerItem> rows;
   Object? writeError;
+  String? pasteText;
+  late int updateAttempts;
+  late int batchAttempts;
 
   List<CustomerItem> all() => [for (var i = 1; i <= 120; i++) _item(i)];
 
+  /// 假写入要真的落到 `rows`，刷新后才能看到新值（与真实数据库一致）。
+  void applyRequests(List<CustomerUpdate> requests) {
+    for (final update in requests) {
+      final index = rows.indexWhere((item) => item.id == update.id);
+      if (index < 0) continue;
+      final item = rows[index];
+      final request = update.request;
+      rows[index] = CustomerItem(
+        id: item.id,
+        code: request.code,
+        name: request.name,
+        kind: request.kind,
+        phone: request.phone,
+        email: request.email,
+        active: request.active,
+        note: request.note,
+        updatedAt: item.updatedAt + 1,
+        updatedBy: item.updatedBy,
+      );
+    }
+  }
+
   Future<void> drainToasts(WidgetTester tester) =>
       tester.pump(const Duration(seconds: 5));
+
+  /// fluent 的 InfoBar 先挂一个空占位，过一小段动画时间才显示内容。
+  Future<void> revealToast(WidgetTester tester) =>
+      tester.pump(const Duration(milliseconds: 500));
+
+  /// 网格内的单元格编辑器（搜索框在网格外，不会被选中）。
+  Finder cellEditor() => find.descendant(
+    of: find.byType(TrinaGrid),
+    matching: find.byType(EditableText),
+  );
+
+  /// 先点一次选中行，再点同一格进入编辑（行选择模式下的常规手势）。
+  Future<void> startEditing(WidgetTester tester, String label) async {
+    await tester.tap(find.text(label));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(label));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> sendPaste(WidgetTester tester) async {
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyV);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+  }
 
   Future<void> pump(
     WidgetTester tester, {
@@ -87,8 +138,17 @@ void main() {
                 return 500;
               },
               update: (id, request) async {
+                updateAttempts += 1;
                 if (writeError != null) throw writeError!;
                 updates.add((id, request));
+                applyRequests([CustomerUpdate(id: id, request: request)]);
+              },
+              updateMany: (requests) async {
+                batchAttempts += 1;
+                if (writeError != null) throw writeError!;
+                batchUpdates.add(requests);
+                applyRequests(requests);
+                return requests.length;
               },
               deleteMany: (ids) async {
                 if (writeError != null) throw writeError!;
@@ -123,15 +183,24 @@ void main() {
     queries = [];
     creates = [];
     updates = [];
+    batchUpdates = [];
     deletes = [];
     activeCalls = [];
     clipboard = [];
     rows = all();
     writeError = null;
+    pasteText = null;
+    updateAttempts = 0;
+    batchAttempts = 0;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(SystemChannels.platform, (call) async {
           if (call.method == 'Clipboard.setData') {
             clipboard.add((call.arguments as Map)['text'] as String?);
+          }
+          if (call.method == 'Clipboard.getData') {
+            return pasteText == null
+                ? null
+                : <String, dynamic>{'text': pasteText};
           }
           return null;
         });
@@ -572,5 +641,220 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('C-001'), findsOneWidget);
     expect(find.byKey(const ValueKey('customers-page-info')), findsOneWidget);
+  });
+
+  testWidgets('editing one cell sends a full update and shows the new value', (
+    tester,
+  ) async {
+    await pump(tester);
+    await startEditing(tester, 'C-001');
+    expect(cellEditor(), findsOneWidget);
+
+    await tester.enterText(cellEditor(), 'C-901');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    // 一次提交一整条记录：未改动字段保留该行原值（含隐藏的类型/启用/备注）。
+    expect(updates, hasLength(1));
+    final (id, request) = updates.single;
+    expect(id, 1);
+    expect(request.code, 'C-901');
+    expect(request.name, 'Acme 1');
+    expect(request.kind, 'customer');
+    expect(request.phone, '');
+    expect(request.email, '');
+    expect(request.active, isTrue);
+    expect(request.note, '');
+    expect(batchAttempts, 0);
+    // 刷新后网格显示新值，且仍停留在第 1 页。
+    expect(find.text('C-901'), findsOneWidget);
+    expect(queries.last.page, 1);
+  });
+
+  testWidgets('a rejected cell edit rolls back once and reports the error', (
+    tester,
+  ) async {
+    writeError = const ApiError(
+      code: 'KEEL-VALIDATION',
+      message: '编号格式不正确',
+      correlationId: '',
+    );
+    await pump(tester);
+    await startEditing(tester, 'C-001');
+    await tester.enterText(cellEditor(), 'bad code!');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(updateAttempts, 1);
+    expect(updates, isEmpty);
+    // 单元格退回旧值，且没有二次提交。
+    expect(find.text('C-001'), findsOneWidget);
+    expect(find.text('bad code!'), findsNothing);
+    await revealToast(tester);
+    expect(
+      find.text('Invalid input. Please check and try again.'),
+      findsOneWidget,
+    );
+    await drainToasts(tester);
+    expect(updateAttempts, 1);
+  });
+
+  testWidgets('a viewer cannot open the cell editor or paste', (tester) async {
+    await pump(tester, user: _viewer);
+    await startEditing(tester, 'C-001');
+    expect(cellEditor(), findsNothing);
+
+    pasteText = 'Hacked\t555-0101';
+    await sendPaste(tester);
+    expect(batchAttempts, 0);
+    expect(batchUpdates, isEmpty);
+    expect(updateAttempts, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('paste writes a 2x2 block through one atomic update', (
+    tester,
+  ) async {
+    pasteText = 'Pasted A\t555-0101\r\nPasted B\t555-0202';
+    await pump(tester);
+    await tester.tap(find.text('Acme 1'));
+    await tester.pumpAndSettle();
+    // 当前单元格从编号列右移到名称列，粘贴块从名称列开始。
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+
+    await sendPaste(tester);
+
+    expect(batchAttempts, 1);
+    expect(batchUpdates, hasLength(1));
+    final requests = batchUpdates.single;
+    expect(requests, hasLength(2));
+    // 第 1 行：名称/电话被替换，编号/邮箱保留原值。
+    expect(requests[0].id, 1);
+    expect(requests[0].request.code, 'C-001');
+    expect(requests[0].request.name, 'Pasted A');
+    expect(requests[0].request.phone, '555-0101');
+    expect(requests[0].request.email, '');
+    expect(requests[0].request.kind, 'customer');
+    expect(requests[0].request.active, isTrue);
+    // 第 2 行同理，隐藏字段按该行自己的原值拼。
+    expect(requests[1].id, 2);
+    expect(requests[1].request.code, 'C-002');
+    expect(requests[1].request.name, 'Pasted B');
+    expect(requests[1].request.phone, '555-0202');
+    expect(requests[1].request.kind, 'supplier');
+    // 成功后提示条数并刷新网格。
+    await revealToast(tester);
+    expect(find.text('Pasted into 2 entries.'), findsOneWidget);
+    expect(find.text('Pasted A'), findsOneWidget);
+    await drainToasts(tester);
+  });
+
+  testWidgets('paste rejects an oversized or empty clipboard', (tester) async {
+    pasteText = 'x' * ((1 << 20) + 1);
+    await pump(tester);
+    await tester.tap(find.text('Acme 1'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+
+    await sendPaste(tester);
+    expect(batchAttempts, 0);
+    await revealToast(tester);
+    expect(
+      find.text('Paste canceled: the clipboard is larger than 1 MiB.'),
+      findsOneWidget,
+    );
+    await drainToasts(tester);
+
+    // 空剪贴板（mock 返回 null）直接返回，不崩溃也不发请求。
+    pasteText = null;
+    await sendPaste(tester);
+    expect(tester.takeException(), isNull);
+    expect(batchAttempts, 0);
+  });
+
+  testWidgets('paste rejects read-only starts, wide blocks and page overflow', (
+    tester,
+  ) async {
+    // 单列内容：只有“起点不可编辑”能拦住它，范围提示不会与宽度越界混淆。
+    pasteText = 'Blocked';
+    await pump(tester);
+    await tester.tap(find.text('Acme 1'));
+    await tester.pumpAndSettle();
+    // 编号 → 名称 → 类型 → 电话 → 邮箱 → 状态：状态列不可编辑。
+    for (var i = 0; i < 5; i += 1) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+    }
+    await sendPaste(tester);
+    expect(batchAttempts, 0);
+    await revealToast(tester);
+    expect(
+      find.text(
+        'Paste canceled: start in an editable column and stay within '
+        'code, name, phone and email.',
+      ),
+      findsOneWidget,
+    );
+    await drainToasts(tester);
+
+    // 从邮箱列开始的两列块超出可编辑块。
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    pasteText = 'a@b.example\tActive';
+    await sendPaste(tester);
+    expect(batchAttempts, 0);
+    await revealToast(tester);
+    expect(
+      find.textContaining('stay within code, name, phone and email'),
+      findsOneWidget,
+    );
+    await drainToasts(tester);
+
+    // 行数超出当前页：光标移到本页最后一行时再粘贴两行。
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pumpAndSettle();
+    pasteText = 'One\t555-0101\r\nTwo\t555-0202';
+    await sendPaste(tester);
+    expect(batchAttempts, 0);
+    await revealToast(tester);
+    expect(
+      find.text(
+        'Paste canceled: it would go past the last entry on this page.',
+      ),
+      findsOneWidget,
+    );
+    await drainToasts(tester);
+  });
+
+  testWidgets('a failed paste leaves the grid untouched and reports it', (
+    tester,
+  ) async {
+    writeError = const ApiError(
+      code: 'KEEL-VALIDATION',
+      message: '名称不能为空',
+      correlationId: '',
+    );
+    pasteText = 'Pasted A\t555-0101';
+    await pump(tester);
+    await tester.tap(find.text('Acme 1'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+
+    await sendPaste(tester);
+
+    expect(batchAttempts, 1);
+    expect(batchUpdates, isEmpty);
+    // 失败不动任何单元格：等成功才刷新，避免半更新。
+    expect(find.text('Acme 1'), findsOneWidget);
+    expect(find.text('Pasted A'), findsNothing);
+    await revealToast(tester);
+    expect(
+      find.text('Invalid input. Please check and try again.'),
+      findsOneWidget,
+    );
+    await drainToasts(tester);
   });
 }

@@ -67,12 +67,16 @@ class CustomerWriter {
   const CustomerWriter({
     required this.create,
     required this.update,
+    required this.updateMany,
     required this.deleteMany,
     required this.setActiveMany,
   });
 
   final Future<int> Function(SaveCustomerRequest request) create;
   final Future<void> Function(int id, SaveCustomerRequest request) update;
+
+  /// 一次事务提交多条：任一记录缺失或校验失败则整批回滚。
+  final Future<int> Function(List<CustomerUpdate> updates) updateMany;
   final Future<int> Function(List<int> ids) deleteMany;
   final Future<int> Function(List<int> ids, bool active) setActiveMany;
 }
@@ -81,6 +85,7 @@ final customerWriterProvider = Provider<CustomerWriter>(
   (ref) => const CustomerWriter(
     create: createCustomerInRust,
     update: updateCustomerInRust,
+    updateMany: updateCustomersInRust,
     deleteMany: deleteCustomersInRust,
     setActiveMany: setCustomersActiveInRust,
   ),

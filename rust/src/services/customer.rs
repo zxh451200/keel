@@ -243,6 +243,72 @@ pub async fn update(pool: &SqlitePool, id: i64, input: CustomerInput) -> Result<
     Ok(())
 }
 
+/// 批量更新（表格区域粘贴后一次提交多行）：权限只检查一次，全部输入先校验，
+/// 任一条记录不存在或编号撞车就整批回滚，成功时逐条写 `customer.update` 审计。
+pub async fn update_many(
+    pool: &SqlitePool,
+    updates: &[(i64, CustomerInput)],
+) -> Result<u32, KeelError> {
+    let _guard = access::lock_identity().await;
+    let me = access::require(pool, Permission::CustomerManage).await?;
+    if updates.is_empty() {
+        return Err(KeelError::Validation("请至少提交一条记录".into()));
+    }
+    if updates.len() > MAX_BATCH {
+        return Err(KeelError::Validation(format!(
+            "一次最多更新 {MAX_BATCH} 条记录"
+        )));
+    }
+    // 与批量删除不同：同一记录重复出现说明粘贴数据有问题，直接拒绝而不是静默去重。
+    let mut seen = std::collections::HashSet::with_capacity(updates.len());
+    for (id, _) in updates {
+        if *id <= 0 {
+            return Err(KeelError::Validation("记录 ID 无效".into()));
+        }
+        if !seen.insert(*id) {
+            return Err(KeelError::Validation("同一记录不能重复提交".into()));
+        }
+    }
+    // 全部输入在开事务前校验完，避免写到一半才发现非法值。
+    let mut values = Vec::with_capacity(updates.len());
+    for (_, input) in updates {
+        values.push(validate(input)?);
+    }
+    let at = now_ms();
+    let mut transaction = pool.begin().await?;
+    for ((id, _), value) in updates.iter().zip(values) {
+        let existing = customer::find_conn(transaction.as_mut(), *id)
+            .await?
+            .ok_or(KeelError::NotFound)?;
+        let row = CustomerRow {
+            id: *id,
+            code: value.code.clone(),
+            name: value.name,
+            kind: value.kind,
+            phone: value.phone,
+            email: value.email,
+            active: value.active,
+            note: value.note,
+            created_at: existing.created_at,
+            updated_at: at,
+            updated_by: me.name.clone(),
+        };
+        customer::update_conn(transaction.as_mut(), *id, &row).await?;
+        audit_data::insert_conn(
+            transaction.as_mut(),
+            at,
+            &me.name,
+            "customer.update",
+            &row.code,
+            "ok",
+            "",
+        )
+        .await?;
+    }
+    transaction.commit().await?;
+    Ok(updates.len() as u32)
+}
+
 fn normalize_ids(ids: &[i64]) -> Result<Vec<i64>, KeelError> {
     if ids.is_empty() {
         return Err(KeelError::Validation("请至少选择一条记录".into()));

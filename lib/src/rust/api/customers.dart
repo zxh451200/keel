@@ -28,6 +28,11 @@ Future<void> updateCustomer({
   request: request,
 );
 
+/// 批量更新；需要 `customers.manage`。任一记录不存在或校验失败则整批回滚，
+/// 同一 id 重复提交返回 `KEEL-VALIDATION`（不做静默去重）。
+Future<int> updateCustomers({required List<CustomerUpdate> updates}) =>
+    RustLib.instance.api.crateApiCustomersUpdateCustomers(updates: updates);
+
 /// 批量删除；需要 `customers.manage`。任一记录不存在则整批回滚（`KEEL-NOT-FOUND`）。
 Future<int> deleteCustomers({required Int64List ids}) =>
     RustLib.instance.api.crateApiCustomersDeleteCustomers(ids: ids);
@@ -187,6 +192,25 @@ class CustomerSort {
           runtimeType == other.runtimeType &&
           field == other.field &&
           descending == other.descending;
+}
+
+/// 区域粘贴后的一次提交：一条记录对应一次完整更新。
+class CustomerUpdate {
+  final PlatformInt64 id;
+  final SaveCustomerRequest request;
+
+  const CustomerUpdate({required this.id, required this.request});
+
+  @override
+  int get hashCode => id.hashCode ^ request.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CustomerUpdate &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          request == other.request;
 }
 
 class SaveCustomerRequest {

@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 830529680;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1896862740;
 
 // Section: executor
 
@@ -2045,6 +2045,44 @@ fn wire__crate__api__customers__update_customer_impl(
         },
     )
 }
+fn wire__crate__api__customers__update_customers_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "update_customers",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_updates =
+                <Vec<crate::api::customers::CustomerUpdate>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, crate::api::error::ApiError>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::customers::update_customers(api_updates).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__users__user_import_progress_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2349,6 +2387,19 @@ impl SseDecode for crate::api::customers::CustomerSort {
     }
 }
 
+impl SseDecode for crate::api::customers::CustomerUpdate {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <i64>::sse_decode(deserializer);
+        let mut var_request =
+            <crate::api::customers::SaveCustomerRequest>::sse_decode(deserializer);
+        return crate::api::customers::CustomerUpdate {
+            id: var_id,
+            request: var_request,
+        };
+    }
+}
+
 impl SseDecode for crate::api::diagnostics::DiagnosticEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2615,6 +2666,20 @@ impl SseDecode for Vec<crate::api::customers::CustomerSort> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::customers::CustomerSort>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::customers::CustomerUpdate> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::customers::CustomerUpdate>::sse_decode(
                 deserializer,
             ));
         }
@@ -3067,7 +3132,8 @@ fn pde_ffi_dispatcher_primary_impl(
         53 => wire__crate__api__audit__start_audit_export_impl(port, ptr, rust_vec_len, data_len),
         55 => wire__crate__api__users__switch_user_impl(port, ptr, rust_vec_len, data_len),
         56 => wire__crate__api__customers__update_customer_impl(port, ptr, rust_vec_len, data_len),
-        57 => wire__crate__api__users__user_import_progress_impl(port, ptr, rust_vec_len, data_len),
+        57 => wire__crate__api__customers__update_customers_impl(port, ptr, rust_vec_len, data_len),
+        58 => wire__crate__api__users__user_import_progress_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -3422,6 +3488,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::customers::CustomerSort>
     for crate::api::customers::CustomerSort
 {
     fn into_into_dart(self) -> crate::api::customers::CustomerSort {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::customers::CustomerUpdate {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.request.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::customers::CustomerUpdate
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::customers::CustomerUpdate>
+    for crate::api::customers::CustomerUpdate
+{
+    fn into_into_dart(self) -> crate::api::customers::CustomerUpdate {
         self
     }
 }
@@ -4039,6 +4126,14 @@ impl SseEncode for crate::api::customers::CustomerSort {
     }
 }
 
+impl SseEncode for crate::api::customers::CustomerUpdate {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i64>::sse_encode(self.id, serializer);
+        <crate::api::customers::SaveCustomerRequest>::sse_encode(self.request, serializer);
+    }
+}
+
 impl SseEncode for crate::api::diagnostics::DiagnosticEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4231,6 +4326,16 @@ impl SseEncode for Vec<crate::api::customers::CustomerSort> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::customers::CustomerSort>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::customers::CustomerUpdate> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::customers::CustomerUpdate>::sse_encode(item, serializer);
         }
     }
 }

@@ -644,6 +644,8 @@
   "customersColName": "名称",
   "customersColKind": "类型",
   "customersColContact": "联系方式",
+  "customersColPhone": "电话",
+  "customersColEmail": "邮箱",
   "customersColStatus": "状态",
   "customersColUpdated": "更新时间",
   "customersEmpty": "没有符合筛选条件的记录。",
@@ -718,6 +720,10 @@
       }
     }
   },
+  "customersPasteTooLarge": "已取消粘贴：剪贴板内容超过 1 MiB。",
+  "customersPasteOutOfRange": "已取消粘贴：只能从可编辑列开始，且不能超出编号、名称、电话、邮箱这四列。",
+  "customersPasteOutOfPage": "已取消粘贴：超出了本页最后一条记录。",
+  "customersPasted": "已粘贴 {count} 条记录。",
   "navSecurity": "登录保护",
   "securityHint": "开启后启动软件需要先输入口令；只保存加盐 Argon2id 校验值，不保存口令本身。",
   "securityStatusOn": "登录保护已开启",

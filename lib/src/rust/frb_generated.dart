@@ -81,7 +81,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 830529680;
+  int get rustContentHash => -1896862740;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -264,6 +264,10 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiCustomersUpdateCustomer({
     required PlatformInt64 id,
     required SaveCustomerRequest request,
+  });
+
+  Future<int> crateApiCustomersUpdateCustomers({
+    required List<CustomerUpdate> updates,
   });
 
   Future<UserImportProgress?> crateApiUsersUserImportProgress({
@@ -1955,6 +1959,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<int> crateApiCustomersUpdateCustomers({
+    required List<CustomerUpdate> updates,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_customer_update(updates, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 57,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_u_32,
+          decodeErrorData: sse_decode_api_error,
+        ),
+        constMeta: kCrateApiCustomersUpdateCustomersConstMeta,
+        argValues: [updates],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiCustomersUpdateCustomersConstMeta =>
+      const TaskConstMeta(debugName: "update_customers", argNames: ["updates"]);
+
+  @override
   Future<UserImportProgress?> crateApiUsersUserImportProgress({
     required String ticketId,
   }) {
@@ -1966,7 +2000,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 57,
+            funcId: 58,
             port: port_,
           );
         },
@@ -2316,6 +2350,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CustomerUpdate dco_decode_customer_update(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return CustomerUpdate(
+      id: dco_decode_i_64(arr[0]),
+      request: dco_decode_save_customer_request(arr[1]),
+    );
+  }
+
+  @protected
   DiagnosticEvent dco_decode_diagnostic_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2512,6 +2558,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<CustomerSort> dco_decode_list_customer_sort(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_customer_sort).toList();
+  }
+
+  @protected
+  List<CustomerUpdate> dco_decode_list_customer_update(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_customer_update).toList();
   }
 
   @protected
@@ -3095,6 +3147,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  CustomerUpdate sse_decode_customer_update(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_i_64(deserializer);
+    var var_request = sse_decode_save_customer_request(deserializer);
+    return CustomerUpdate(id: var_id, request: var_request);
+  }
+
+  @protected
   DiagnosticEvent sse_decode_diagnostic_event(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_at = sse_decode_i_64(deserializer);
@@ -3362,6 +3422,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <CustomerSort>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_customer_sort(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<CustomerUpdate> sse_decode_list_customer_update(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <CustomerUpdate>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_customer_update(deserializer));
     }
     return ans_;
   }
@@ -3941,6 +4015,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_customer_update(
+    CustomerUpdate self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_64(self.id, serializer);
+    sse_encode_save_customer_request(self.request, serializer);
+  }
+
+  @protected
   void sse_encode_diagnostic_event(
     DiagnosticEvent self,
     SseSerializer serializer,
@@ -4159,6 +4243,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_customer_sort(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_customer_update(
+    List<CustomerUpdate> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_customer_update(item, serializer);
     }
   }
 

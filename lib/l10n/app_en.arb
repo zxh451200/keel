@@ -644,6 +644,8 @@
   "customersColName": "Name",
   "customersColKind": "Type",
   "customersColContact": "Contact",
+  "customersColPhone": "Phone",
+  "customersColEmail": "Email",
   "customersColStatus": "Status",
   "customersColUpdated": "Updated",
   "customersEmpty": "No entries match the filters.",
@@ -712,6 +714,17 @@
   },
   "customersUpdatedCount": "Updated {count}.",
   "@customersUpdatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersPasteTooLarge": "Paste canceled: the clipboard is larger than 1 MiB.",
+  "customersPasteOutOfRange": "Paste canceled: start in an editable column and stay within code, name, phone and email.",
+  "customersPasteOutOfPage": "Paste canceled: it would go past the last entry on this page.",
+  "customersPasted": "{count, plural, =1{Pasted into 1 entry.} other{Pasted into {count} entries.}}",
+  "@customersPasted": {
     "placeholders": {
       "count": {
         "type": "int"

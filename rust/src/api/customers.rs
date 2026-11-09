@@ -132,6 +132,22 @@ pub async fn update_customer(id: i64, request: SaveCustomerRequest) -> Result<()
     Ok(customer::update(state::pool()?, id, input(request)).await?)
 }
 
+/// 区域粘贴后的一次提交：一条记录对应一次完整更新。
+pub struct CustomerUpdate {
+    pub id: i64,
+    pub request: SaveCustomerRequest,
+}
+
+/// 批量更新；需要 `customers.manage`。任一记录不存在或校验失败则整批回滚，
+/// 同一 id 重复提交返回 `KEEL-VALIDATION`（不做静默去重）。
+pub async fn update_customers(updates: Vec<CustomerUpdate>) -> Result<u32, ApiError> {
+    let pairs: Vec<(i64, customer::CustomerInput)> = updates
+        .into_iter()
+        .map(|update| (update.id, input(update.request)))
+        .collect();
+    Ok(customer::update_many(state::pool()?, &pairs).await?)
+}
+
 /// 批量删除；需要 `customers.manage`。任一记录不存在则整批回滚（`KEEL-NOT-FOUND`）。
 pub async fn delete_customers(ids: Vec<i64>) -> Result<u32, ApiError> {
     Ok(customer::delete_many(state::pool()?, &ids).await?)
