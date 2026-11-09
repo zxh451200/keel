@@ -10,6 +10,7 @@ import 'package:keel/src/rust/api/customers.dart';
 import 'package:keel/src/rust/api/error.dart';
 import 'package:keel/src/rust/api/users.dart';
 import 'package:keel/ui/pages/customers_page.dart';
+import 'package:trina_grid/trina_grid.dart';
 
 const _admin = UserInfo(
   name: 'local',
@@ -143,6 +144,7 @@ void main() {
 
   testWidgets('lists one page with total and paging', (tester) async {
     await pump(tester);
+    expect(find.byType(TrinaGrid), findsOneWidget);
     expect(find.text('C-001'), findsOneWidget);
     expect(find.text('Acme 1'), findsOneWidget);
     expect(find.text('Total: 120'), findsOneWidget);
@@ -517,6 +519,51 @@ void main() {
     await pump(tester, size: const Size(1280, 800));
     expect(tester.takeException(), isNull);
     expect(find.text('C-001'), findsOneWidget);
+  });
+
+  testWidgets('Shift+arrow extends the selection from the anchor', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.tap(find.text('Acme 1'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+    await tester.tap(find.byKey(const ValueKey('customers-copy')));
+    await tester.pumpAndSettle();
+    final rows = clipboard.last!.split('\r\n');
+    expect(rows, hasLength(3));
+    expect(rows.first, startsWith('C-001\tAcme 1'));
+    expect(rows.last, startsWith('C-003\tAcme 3'));
+    await drainToasts(tester);
+  });
+
+  testWidgets('Home and End move the cursor to the first and last row', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.tap(find.text('Acme 5'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('customers-copy')));
+    await tester.pumpAndSettle();
+    expect(clipboard.last, startsWith('C-001\tAcme 1'));
+    await drainToasts(tester);
+
+    // 复制按钮拿走了焦点，回到表格后再试 End。
+    await tester.tap(find.text('Acme 5'));
+    await tester.pumpAndSettle();
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('customers-copy')));
+    await tester.pumpAndSettle();
+    expect(clipboard.last, startsWith('C-050\tAcme 50'));
+    await drainToasts(tester);
   });
 
   testWidgets('the smallest logical window still shows rows', (tester) async {
