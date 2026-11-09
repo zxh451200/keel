@@ -164,11 +164,7 @@ void main() {
 
   // 桥接样例页在 build 时就调用 Rust，widget 测试没有动态库；它由
   // integration_test/simple_test.dart 在真实桥接下覆盖。
-  for (final query in const [
-    'Sign-in protection',
-    'Tasks',
-    'Standard form',
-  ]) {
+  for (final query in const ['Sign-in protection', 'Tasks', 'Standard form']) {
     testWidgets('$query fits the smallest window', (tester) async {
       await pump(tester);
       await openPage(tester, query);

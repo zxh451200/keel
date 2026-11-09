@@ -11,9 +11,11 @@ void main() {
   Set<String> messageKeys(Map<String, dynamic> arb) =>
       arb.keys.where((key) => !key.startsWith('@')).toSet();
 
-  Set<String> placeholders(String message) => RegExp(
-    r'\{(\w+)[,}]',
-  ).allMatches(message).map((match) => match.group(1)!).toSet();
+  Set<String> placeholders(String message) =>
+      RegExp(r'\{(\w+)[,}]')
+          .allMatches(message)
+          .map((match) => match.group(1)!)
+          .toSet();
 
   test('en and zh ARB define the same keys', () {
     final en = load('lib/l10n/app_en.arb');
