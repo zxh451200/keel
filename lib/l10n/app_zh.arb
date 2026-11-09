@@ -1,0 +1,746 @@
+{
+  "@@locale": "zh",
+  "userImportTitle": "批量导入用户",
+  "userImportHint": "粘贴 JSONL，每行一个对象，包含 name 和 role（viewer 或 operator）。上限 1 MiB、1,000 行、每行 4,096 字节。整批提交或回滚。",
+  "userImportInput": "JSONL 用户记录",
+  "userImportPreviewHint": "确认前请核对整批内容，Rust 会再次校验每条记录。",
+  "userImportPreviewAction": "预览整批",
+  "userImportConfirmAction": "确认导入",
+  "userImportWaiting": "正在等待导入最终结果。取消请求成功不代表已回滚。",
+  "userImportProgress": "已处理 {processed}/{total} 条记录，事务结果尚未确认。",
+  "@userImportProgress": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "userImportStale": "用户或服务已变化，请关闭弹窗后重新准备。",
+  "userImportCancelled": "导入已在提交前取消。",
+  "userImportCancelFailed": "取消请求失败，请等待导入最终结果。",
+  "userImportDone": "已创建 {count} 个用户。",
+  "@userImportDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menuTimeZone": "显示时区",
+  "timeZoneSystem": "本机时区",
+  "timeZoneUtc": "UTC",
+  "menuCurrency": "默认币种",
+  "currencyUnspecified": "未指定",
+  "currencyPreferenceNotice": "仅用于未指定币种的新输入默认值，不换汇，也不改变已有金额的币种。",
+  "appTitle": "Keel",
+  "auditDateRange": "日期范围",
+  "auditDateRangeSelected": "{start} 至 {end}",
+  "@auditDateRangeSelected": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "auditDateRangeFrom": "自 {date} 起",
+  "@auditDateRangeFrom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "auditDateRangeThrough": "截至 {date}",
+  "@auditDateRangeThrough": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "auditClearDates": "清除日期",
+  "auditResetAll": "重置全部筛选",
+  "auditSortHint": "点击列加入排序；再次点击切换升降序；Ctrl+点击移除；最多 3 列，后加入的排在后面。",
+  "auditDateRangeHint": "按本机日历日期筛选，包含开始日期和结束日期当天。",
+  "auditDateRangeApply": "应用日期",
+  "auditExport": "导出筛选结果 CSV",
+  "auditCopySave": "另存一份…",
+  "auditCsvFilter": "CSV 审计记录",
+  "auditCopySaving": "正在选择位置或保存副本…",
+  "auditCopySaved": "副本已保存到 {path}",
+  "@auditCopySaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "auditCopyHint": "请选择新的 .csv 文件，不会替换已有文件。请在导出完成后 5 分钟内另存；任务过期后需重新导出。分享前请检查文件。",
+  "auditExportScope": "按已提交的筛选和排序导出全部匹配审计记录，最多 100,000 行 / 64 MiB，保存到应用数据目录的 exports 文件夹。包含操作者姓名和 UTC 时间，分享前请检查文件。",
+  "auditExportWorking": "正在导出审计记录…",
+  "auditExportCancelling": "正在取消导出…",
+  "auditExportCancelled": "导出已取消，未生成完整文件。",
+  "auditExportOtherUser": "导出任务属于其他用户，请切回任务所有者查看或取消。",
+  "auditExportProgress": "已导出 {done} / {total} 行",
+  "@auditExportProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "navSettingsImport": "导入设置",
+  "settingsImportChooseFile": "选择配置文件…",
+  "settingsImportJsonFilter": "JSON 配置文件",
+  "settingsImportInput": "配置 JSON",
+  "settingsImportInputHint": "粘贴配置 JSON（最多 1 MiB）。预览不会修改设置。导入将替换语言、主题、显示区域和导航偏好；已打开的标签与草稿会保留。",
+  "menuFormatLocale": "显示区域",
+  "formatLocaleSystem": "跟随系统（支持的区域，否则使用美国格式）",
+  "formatLocaleUs": "英语（美国）",
+  "formatLocaleGb": "英语（英国）",
+  "formatLocaleCn": "中文（中国）",
+  "totalCountFormatted": "共 {count} 条",
+  "@totalCountFormatted": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "pagePositionFormatted": "第 {page} 页，共 {pages} 页",
+  "@pagePositionFormatted": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "pages": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeBytesFormatted": "{size} 字节",
+  "@backupSizeBytesFormatted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeExactBytesFormatted": "{size} 字节",
+  "@backupSizeExactBytesFormatted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportLimit": "请输入非空配置文本，UTF-8 编码后不能超过 1 MiB。",
+  "settingsImportPreviewHint": "请检查脱敏预览后再导入，脱敏可能遗漏敏感信息。导入使用原始快照，5 分钟后过期，只能确认一次。重新预览时请再次粘贴配置。",
+  "settingsImportConfirm": "确认导入",
+  "settingsImportWorking": "正在预览或导入设置…",
+  "settingsImportReloadHint": "设置已导入，但未能刷新界面，偏好修改已暂停。请在此重试读取设置后再修改，或重启程序。",
+  "settingsImportDone": "设置已导入，界面已刷新。",
+  "settingsImportReadPaused": "偏好修改已暂停，打开导入页",
+  "settingsImportPreviewTitle": "脱敏预览",
+  "settingsImportPreviewEmpty": "预览结果会显示在这里。粘贴配置或选择文件后，点“预览”。",
+  "settingsImportSizeCounter": "{used} / 1 MiB",
+  "@settingsImportSizeCounter": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportSnapshotVersion": "配置版本 v{version}",
+  "@settingsImportSnapshotVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportRedactedCount": "已脱敏 {count} 组敏感字段",
+  "@settingsImportRedactedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "auditPageHint": "按关键字和日期范围筛选审计记录；搜索、排序和分页都在本机数据库完成。",
+  "backupPageHint": "备份保存在应用数据目录。恢复登记后在下次启动时生效，当前数据库会保留。",
+  "diagPageHint": "查看最近的错误、警告和诊断事件。事件写入时已脱敏，不显示堆栈和 SQL 参数。",
+  "taskCurrentSection": "当前任务",
+  "taskHistorySection": "任务历史",
+  "taskHistoryEmpty": "没有可显示的历史任务。",
+  "samplesPageHint": "三类桥接调用的本地验收页：同步字符串、同步结构体、异步结构体；结果来自 Rust，不写入数据库。",
+  "errImport": "未能导入配置。请检查格式和版本，然后重新预览。",
+  "menuFile": "文件",
+  "menuView": "视图",
+  "menuSidebar": "导航栏",
+  "menuTools": "工具",
+  "menuNoCommands": "当前页面没有可用命令",
+  "menuWindow": "窗口",
+  "menuHelp": "帮助",
+  "menuOpenPage": "打开页面…",
+  "quickPageSearchTitle": "打开页面",
+  "quickPageSearchHint": "搜索页面名称",
+  "quickPageSearchEmpty": "没有匹配的页面。",
+  "actionOpen": "打开",
+  "menuCloseTab": "关闭标签",
+  "menuCloseOthers": "关闭其他标签",
+  "menuCloseAll": "关闭全部标签",
+  "menuAbout": "关于",
+  "navCollapse": "折叠导航",
+  "navExpand": "展开导航",
+  "navModules": "模块",
+  "navSidebarTitle": "导航",
+  "navFavorites": "收藏",
+  "navRecent": "最近访问",
+  "navFavoritesEmpty": "暂无收藏。",
+  "navRecentEmpty": "暂无最近访问的页面。",
+  "navAddFavorite": "添加到收藏",
+  "navRemoveFavorite": "取消收藏",
+  "navFavoriteLimit": "最多可收藏 50 个页面。",
+  "workspaceNavigationProtected": "未能安全读取导航偏好。修改仅在本次运行生效，原文件已保护。请修复配置后重启。",
+  "workspaceNavigationSaving": "正在保存导航偏好…",
+  "workspaceNavigationUnsaved": "导航偏好未能保存。本次运行仍保留你的修改。",
+  "actionRetryNavigationSave": "重试保存导航",
+  "closeTabTooltip": "关闭",
+  "navDiagnostics": "诊断中心",
+  "diagMinLevel": "最低级别",
+  "diagSearchId": "诊断 ID",
+  "diagSearchIdHint": "完整 ID，区分大小写",
+  "diagSearchIdInvalid": "请使用不超过 128 个 Unicode 字符，且不能包含控制字符。",
+  "diagNoMatches": "保留的事件中没有匹配结果。请检查 ID 和最低级别，或重置筛选。",
+  "diagSearchScope": "仅查询本次运行保留的最多 500 条事件，最多显示 200 条匹配结果；更早的事件可能已移除。",
+  "diagEmpty": "暂无事件。",
+  "diagCopyId": "复制诊断 ID",
+  "diagIdCopied": "已复制诊断 ID。",
+  "levelInfo": "信息",
+  "levelWarn": "警告",
+  "levelError": "错误",
+  "actionRefresh": "刷新",
+  "actionSearch": "搜索",
+  "actionCopyRow": "复制选中行",
+  "auditKeyboardHint": "用 ↑/↓ 或 Home/End 选择行，Ctrl+C 复制，Esc 清除选择。",
+  "auditRowCopied": "已复制选中行。",
+  "actionReset": "重置",
+  "actionRetry": "重试",
+  "actionDismiss": "知道了",
+  "actionClose": "关闭",
+  "usersPageHint": "创建本地用户并分配角色；权限最终由 Rust 边界校验。",
+  "startupRestoreDone": "本次启动已从备份恢复数据库。数据库是否就绪请查看状态栏。",
+  "startupRestoreFailed": "启动时未能完成备份恢复。请在诊断中心查看详情，数据库是否可用请查看状态栏。",
+  "startupRestoreStatusFailed": "未能读取本次启动的备份恢复结果。",
+  "actionRetryDatabase": "重试数据库",
+  "actionRetrySave": "重试保存设置",
+  "databaseUnavailableHint": "数据库功能暂不可用。请重试，或在诊断中心查看详情。",
+  "databaseRetrying": "正在重新打开数据库…",
+  "settingsUnsaved": "设置未能保存。本次运行仍使用你选择的设置。",
+  "settingsSaving": "正在保存设置…",
+  "settingsProtected": "未能安全读取设置。修改仅在本次运行生效，原文件已保护。请查看诊断中心并修复配置文件后重启。",
+  "menuNextTab": "下一个标签",
+  "menuPreviousTab": "上一个标签",
+  "pagePosition": "第 {page} 页，共 {pages} 页",
+  "loadFailed": "加载失败：{message}",
+  "errValidation": "输入有误，请检查后重试。",
+  "errNotFound": "记录已不存在。",
+  "errGeneric": "操作失败，请重试。",
+  "errDiagnosticId": "（诊断 ID：{id}）",
+  "navAudit": "审计日志",
+  "searchHint": "搜索操作者、动作或对象",
+  "emptyList": "暂无数据",
+  "totalCount": "共 {count} 条",
+  "prevPage": "上一页",
+  "nextPage": "下一页",
+  "colTime": "时间",
+  "colActor": "操作者",
+  "colAction": "动作",
+  "colTarget": "对象",
+  "colResult": "结果",
+  "statusDbReady": "数据库：就绪",
+  "statusDbUnavailable": "数据库：不可用",
+  "statusActiveOperations": "{count} 个操作进行中",
+  "statusActivityBackup": "备份或恢复操作 / 确认",
+  "statusActivityDiagnostics": "准备或导出诊断包",
+  "statusVersion": "版本 {version}",
+  "errDuplicate": "该项已存在。",
+  "errPermission": "你没有权限执行此操作。",
+  "noPermissionToView": "你没有权限查看此页面。",
+  "roleAdmin": "管理员",
+  "roleOperator": "操作员",
+  "roleViewer": "查看者",
+  "statusUser": "用户：{name}（{role}）",
+  "userMenuTooltip": "切换或新建用户",
+  "menuNewUser": "新建用户…",
+  "userNameLabel": "用户名",
+  "formErrorSummary": "请修正以下错误。",
+  "navNewUser": "创建用户",
+  "userRoleLabel": "角色",
+  "userNameRequired": "请输入用户名。",
+  "userNameTooLong": "用户名不能超过 32 个 Unicode 字符。",
+  "userNameControl": "用户名不能包含控制字符。",
+  "userCreating": "正在创建…",
+  "unsavedTitle": "放弃未保存的修改？",
+  "unsavedMessage": "你的修改尚未保存，是否放弃修改并继续？",
+  "actionDiscard": "放弃修改",
+  "actionKeepEditing": "继续编辑",
+  "closeCheckFailed": "未能完成页面关闭检查，已保留所有打开的页面，请重试。",
+  "userCreate": "创建",
+  "userCreated": "用户已创建。",
+  "actionCancel": "取消",
+  "actionSave": "保存",
+  "navBackup": "备份与恢复",
+  "backupNow": "立即备份",
+  "backupWorking": "正在处理备份操作或等待确认，请完成后再关闭。",
+  "backupEmpty": "还没有备份。",
+  "backupSizeBytes": "{count} 字节",
+  "backupSizeKib": "{value} KiB",
+  "backupSizeMib": "{value} MiB",
+  "backupSizeGib": "{value} GiB",
+  "backupSizeTib": "{value} TiB",
+  "backupSizeExactBytes": "{count} 字节",
+  "backupDone": "已创建备份：{name}",
+  "backupRestore": "恢复",
+  "backupRestoreTitle": "从备份恢复？",
+  "backupRestoreMessage": "下次启动程序时，数据库将被替换为 {name}。当前的数据库会改名保留在旁边，不会删除。这份备份之后做的改动不会出现在恢复后的数据里。",
+  "backupRestoreScheduled": "已登记恢复，下次启动程序时生效。",
+  "backupRestorePending": "下次启动程序时将从 {name} 恢复。",
+  "backupRestoreCancel": "取消恢复",
+  "diagExport": "导出诊断包",
+  "diagExportTitle": "导出诊断包",
+  "diagExportHint": "下面就是将写入文件的完整内容。敏感信息按规则遮盖，规则不可能覆盖所有情况，导出前请先看一遍。",
+  "diagExportConfirm": "导出",
+  "diagPackSelectionHint": "选择要包含的内容。点击“预览”后才会采集。",
+  "diagPackRuntime": "程序与系统",
+  "diagPackRuntimeHint": "仅程序版本、操作系统和处理器架构，不含用户名、路径、配置或数据库记录。",
+  "diagPackEvents": "最近的诊断事件",
+  "diagPackEventsHint": "最多 500 条已脱敏事件：时间、级别、功能区域、错误码、诊断 ID 和摘要。不读取原始日志文件。",
+  "diagPackChooseCategory": "请至少选择一个类别再预览。",
+  "diagPackWorking": "正在准备或导出诊断包，请等待完成后再关闭。",
+  "diagPackReprepareHint": "请重新点击“预览”后再导出。",
+  "diagPackEventCount": "包含 {count} 条诊断事件",
+  "diagPackSnapshotHint": "导出仅写入这份快照。快照 5 分钟后过期，仅可导出一次；更改类别后需要重新预览。",
+  "diagPackPreview": "预览",
+  "diagExportDone": "已导出到 {path}",
+  "workspaceEmpty": "从“模块”菜单打开一个页面。",
+  "workspaceShortcutHint": "按 Ctrl+K 快速打开任意页面",
+  "uiUnderConstruction": "此页面正在用 Fluent 重建",
+  "uiDashboard": "工作台",
+  "statusOpenTabs": "已打开 {count} 个标签",
+  "menuLanguage": "语言",
+  "langSystem": "跟随系统",
+  "langZh": "简体中文",
+  "langEn": "English",
+  "menuTheme": "主题",
+  "themeSystem": "跟随系统",
+  "themeLight": "浅色",
+  "themeDark": "深色",
+  "samplesNavLabel": "桥接样例",
+  "formSamplesNavLabel": "普通表单",
+  "samplesTitle": "flutter_rust_bridge 快速验证",
+  "sampleSyncString": "同步字符串",
+  "sampleSyncStruct": "同步结构体",
+  "sampleAsyncStruct": "异步结构体",
+  "sampleAction": "调用：{action}",
+  "sampleResult": "结果：{result}",
+  "sampleRunning": "运行中…",
+  "sampleNotCalled": "尚未调用",
+  "sampleCallAsync": "异步调用 Rust",
+  "navTasks": "任务",
+  "taskViewScope": "显示本进程中正在运行的本人审计 CSV 导出任务；持久化元数据请查看下方任务历史。重启时运行中的任务会标记为中断，不会自动重放。",
+  "taskViewEmpty": "当前没有可显示的任务。",
+  "taskPhaseCompleted": "已完成",
+  "taskPhaseFailed": "失败",
+  "taskPhaseInterrupted": "重启后中断",
+  "taskPhaseRunning": "进行中",
+  "taskPhaseCancelled": "已取消",
+  "taskPhaseUnknown": "状态未知",
+  "taskRefreshStatus": "重新查询状态",
+  "formSamplesTitle": "普通表单（本地交互样例）",
+  "formSampleLocalNotice": "本页只演示输入和本地预览；不写入文件或数据库，也不调用 Rust 业务校验。",
+  "formSampleInternationalInputRules": "显示区域：{region}。输入使用 ASCII 数字；整数不接受分组。此样例使用精确的非负金额，范围 0–9,999,999.99、两位小数：小数点为 .，可选分组符为 ,，每组三位。币种标签仅用于预览，不改变最小单位金额。日期格式：{datePattern}，年份范围 1900–2100；时间使用 24 小时 HH:mm。",
+  "@formSampleInternationalInputRules": {
+    "placeholders": {
+      "region": {
+        "type": "String"
+      },
+      "datePattern": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleValuesSection": "文本、数字与金额",
+  "formSampleDatesSection": "日历日期与本地日期时间",
+  "formSampleChoiceSection": "枚举选择",
+  "formSampleText": "示例文本",
+  "formSampleInteger": "整数",
+  "formSampleAmount": "金额（USD，样例固定币种）",
+  "formSampleDate": "日历日期（无时区）",
+  "formSampleDateTime": "本地日期时间",
+  "formSampleChoice": "示例选项",
+  "formSampleStandard": "标准",
+  "formSamplePriority": "优先",
+  "formSampleTextError": "请输入非空文本，最多 80 个 Unicode 标量字符。",
+  "formSampleIntegerError": "请输入 -2147483648 至 2147483647 的整数，不使用分组、小数或指数。",
+  "formSampleAmountError": "请输入 0–9,999,999.99 的 USD 金额；使用 . 小数点及可选的 , 三位分组，最多两位小数。不接受前导零、符号、指数或非有限数值。",
+  "formSampleDateError": "请输入格式为 {pattern}、年份在 1900–2100 的有效日历日期。",
+  "@formSampleDateError": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleDateTimeError": "请输入格式为 {pattern} 的有效本地日期时间，年份为 1900–2100；不接受夏令时跳过的时间。",
+  "@formSampleDateTimeError": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleTimeDisplayNotice": "日历日期仅包含年月日，不转换为 UTC。日期时间使用本机时区；预览可将同一时间点显示为本机时间或 UTC。夏令时重复时间沿用系统选择，本样例不提供时区选择或重复时间消歧，不用于业务排程。",
+  "formSampleUtc": "UTC",
+  "formSampleSystemLocal": "本机时间",
+  "formSampleTimeDisplay": "时间显示",
+  "formSampleCurrency": "币种",
+  "formSampleLocaleChanged": "显示区域已改变。原格式下无效的日期文本已保留，请按当前格式重新编辑。",
+  "formSamplePreviewAction": "生成本地预览",
+  "formSampleResetAction": "重置草稿",
+  "formSamplePreviewNotice": "仅本地内存预览，未保存到文件或数据库。草稿仍未持久化，关闭时将再次确认。",
+  "formSampleInternationalPreview": "文本：{text}\n整数：{integer}\n金额：{amount}\n精确最小单位：{minor}\n日历日期（无时区）：{date}\n日期时间（{timeDisplay}）：{dateTime}\nUTC epoch 毫秒：{epoch}\n选项：{choice}",
+  "@formSampleInternationalPreview": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "integer": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "minor": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "dateTime": {
+        "type": "String"
+      },
+      "timeDisplay": {
+        "type": "String"
+      },
+      "epoch": {
+        "type": "String"
+      },
+      "choice": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleDiscardTitle": "放弃本地草稿？",
+  "formSampleDiscardMessage": "输入和预览只保留在本地内存，尚未持久化。放弃后将丢失此草稿。",
+  "taskHistoryScope": "显示已持久化的本人审计 CSV 导出历史，按创建时间倒序排列。重启时运行中的任务会标记为中断；终态历史保留 30 天且最多 1000 条。历史只读；活动任务仍在当前任务区域显示。",
+  "taskHistoryRefresh": "刷新任务列表",
+  "diagHistoryTitle": "历史诊断日志",
+  "diagHistoryText": "脱敏日志中的文字（区分大小写）",
+  "diagHistoryScope": "仅检索本应用日志。最多读取14个文件、扫描4 MiB、返回200行，每行最多2048字符。按文件日期从新到旧，文件内保持原顺序；不支持搜索表达式。脱敏规则可能遗漏敏感内容。",
+  "diagHistoryTruncated": "结果不完整：已达到检索上限，或跳过不安全、损坏、超长或不完整内容。未匹配不代表全部历史日志中不存在。",
+  "diagHistoryEmpty": "本次受限检索未找到匹配日志行。",
+  "@pagePosition": {
+    "placeholders": {
+      "page": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "pages": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "@loadFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "@errDiagnosticId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "@totalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "@statusActiveOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "@statusVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "@statusUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupSizeBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "@backupSizeKib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupSizeMib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupSizeGib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupSizeTib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupSizeExactBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "@backupDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupRestoreMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@backupRestorePending": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "@diagPackEventCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@diagExportDone": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "@statusOpenTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "@sampleAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "actionPrint": "打印当前页",
+  "printPreviewTitle": "打印预览",
+  "printCurrentPageHint": "仅将当前已加载分页中的记录发送到系统打印对话框。请先核对完整文本再继续。",
+  "printSubmitted": "报告已提交给打印机。这不表示打印已经完成。",
+  "printCancelled": "已取消打印。",
+  "errPrint": "无法提交报告，请检查打印机后重试。",
+  "currentActivitiesScope": "仅显示本次运行中正在进行的活动；活动结束后移除。持久化的审计导出历史可在任务页查看。",
+  "externalDiagnosticTitle": "检查外部诊断文本",
+  "externalDiagnosticInput": "外部诊断文本",
+  "externalDiagnosticHint": "粘贴不超过 1 MiB 的 UTF-8 诊断文本。预览会遮盖敏感值，不导入设置或更改数据库。不支持二进制文件和归档。",
+  "externalDiagnosticPreviewHint": "请核对完整脱敏文本，规则可能遗漏敏感信息。导出会在 5 分钟内一次性写入这份快照；更改输入后需重新预览。",
+  "@sampleResult": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "navCustomers": "往来单位",
+  "customersHint": "带 Rust 侧校验与审计的参考列表。这是二开示例模块，不属于 Keel 底座自带业务范围。",
+  "customersReadOnly": "当前角色只能查看，不能修改。",
+  "customersNew": "新建",
+  "customersEdit": "编辑",
+  "customersSearchHint": "搜索编号、名称、电话或邮箱",
+  "customersKindAll": "全部类型",
+  "customersStatusAny": "全部状态",
+  "customersStatusActive": "仅启用",
+  "customersStatusInactive": "仅停用",
+  "customersColCode": "编号",
+  "customersColName": "名称",
+  "customersColKind": "类型",
+  "customersColContact": "联系方式",
+  "customersColStatus": "状态",
+  "customersColUpdated": "更新时间",
+  "customersEmpty": "没有符合筛选条件的记录。",
+  "customersTotal": "共 {count} 条",
+  "@customersTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersPageOf": "第 {page} / {totalPage} 页",
+  "@customersPageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPage": {
+        "type": "int"
+      }
+    }
+  },
+  "customersPrevious": "上一页",
+  "customersNext": "下一页",
+  "customersSaved": "已保存。",
+  "kindCustomer": "客户",
+  "kindSupplier": "供应商",
+  "kindBoth": "客户兼供应商",
+  "customersActive": "启用",
+  "customersInactive": "停用",
+  "customersCode": "编号",
+  "customersName": "名称",
+  "customersKind": "类型",
+  "customersPhone": "电话（可选）",
+  "customersEmail": "邮箱（可选）",
+  "customersNote": "备注（可选）",
+  "customersEnabled": "启用",
+  "customersSave": "保存",
+  "customersCancel": "取消",
+  "errCustomerCode": "编号需为 1-32 个字母、数字、下划线或短横线。",
+  "errCustomerName": "名称必填，1-80 个字符。",
+  "errCustomerPhone": "电话只能包含数字、空格、+、- 和括号，最多 32 个字符。",
+  "errCustomerEmail": "邮箱格式不正确。",
+  "errCustomerNote": "备注最多 500 个字符。",
+  "customersCopy": "复制",
+  "customersCopied": "已复制。",
+  "customersEnable": "启用",
+  "customersDisable": "停用",
+  "customersDelete": "删除",
+  "customersDeleteTitle": "删除所选记录？",
+  "customersDeleteMessage": "将删除 {count} 条记录，且无法撤销。",
+  "@customersDeleteMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDeleted": "已删除 {count} 条。",
+  "@customersDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersUpdatedCount": "已更新 {count} 条。",
+  "@customersUpdatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navSecurity": "登录保护",
+  "securityHint": "开启后启动软件需要先输入口令；只保存加盐 Argon2id 校验值，不保存口令本身。",
+  "securityStatusOn": "登录保护已开启",
+  "securityStatusOff": "登录保护已关闭",
+  "securityNoPassword": "尚未设置口令。",
+  "securityCurrent": "当前口令",
+  "securityNew": "新口令",
+  "securityConfirm": "确认新口令",
+  "securityPasswordRule": "至少 8 个字符，且不能是同一个字符重复。",
+  "securitySavePassword": "保存口令",
+  "securityEnable": "开启登录保护",
+  "securityDisable": "关闭登录保护",
+  "securityAdminOnly": "只有管理员可以修改登录保护。",
+  "securitySaved": "已保存。",
+  "securityLockNow": "立即锁定",
+  "securityMismatch": "两次输入的口令不一致。",
+  "securityTooShort": "至少需要 8 个字符。",
+  "loginHint": "输入访问口令以进入 Keel。",
+  "loginPassword": "口令",
+  "loginSubmit": "登录",
+  "loginWrongPassword": "口令不正确。",
+  "loginPasswordRequired": "请输入口令。",
+  "loginDatabaseUnavailable": "数据库尚未就绪，请重试后再登录。",
+  "errAuth": "认证失败。",
+  "noPageCommands": "当前页面没有命令。"
+}

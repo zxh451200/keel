@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Build outputs and generated tool caches are not published secrets."
+paths = [
+  '''(^|[\/])build[\/]''',
+  '''(^|[\/])\.dart_tool[\/]''',
+  '''(^|[\/])rust[\/]target[\/]''',
+  '''(^|[\/])windows[\/]flutter[\/]ephemeral[\/]''',
+  '''(^|[\/])linux[\/]flutter[\/]ephemeral[\/]''',
+]

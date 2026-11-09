@@ -1,0 +1,22 @@
+name: keel_grid_columns_trina_poc
+description: Isolated trina_grid comparison POC for the Keel grid evaluation.
+publish_to: none
+
+environment:
+  sdk: '>=3.9.2 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  trina_grid: 2.4.0
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  generate: true
+  uses-material-design: true

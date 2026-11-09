@@ -1,0 +1,6 @@
+arb-dir: lib/l10n
+template-arb-file: poc_en.arb
+output-localization-file: poc_localizations.dart
+output-class: PocLocalizations
+output-dir: lib/l10n
+nullable-getter: false

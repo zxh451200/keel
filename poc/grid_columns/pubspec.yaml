@@ -1,0 +1,22 @@
+name: keel_grid_columns_poc
+description: Isolated column layout adapter for the Keel grid evaluation.
+publish_to: none
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  pluto_grid: 8.1.0
+  flutter_localizations:
+    sdk: flutter
+  intl: 0.20.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  generate: true
+  uses-material-design: true

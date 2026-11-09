@@ -1,0 +1,53 @@
+# cargo-deny 0.20 配置：安全公告、重复依赖、许可证、来源四项检查。
+# 政策依据见 docs/REQUIREMENTS.md §7.1（许可证政策）与 §7.4（发布阻断条件）。
+# 运行：bash scripts/security-check.sh，或在 rust/ 下 `cargo deny check`。
+#
+# 0.20 的默认取向就是 fail-closed：公告与未在白名单内的许可证一律判红，
+# 例外必须写进 ignore / exceptions，并按 §7.4 记录公告编号、影响分析、负责人、复查日期。
+
+[graph]
+# 只检查实际发布目标平台的依赖图，避免把 wasm/其他平台的独有依赖算进来。
+targets = ["x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu"]
+all-features = true
+
+[advisories]
+db-urls = ["https://github.com/rustsec/advisory-db"]
+db-path = "~/.cargo/advisory-db"
+git-fetch-with-cli = true
+ignore = [
+  # rsa 0.9.10 仅在未启用的 MySQL/PostgreSQL 分支；sqlite 目标图不含它。复查 2027-01-31。
+  { id = "RUSTSEC-2023-0071", reason = "unused sqlx mysql/postgres lock branches; sqlite-only target graph" },
+]
+
+[licenses]
+confidence-threshold = 0.93
+# §7.1：优先 MIT / Apache-2.0 / BSD；0BSD / Zlib / ISC / Unicode-DFS-2016 同为宽松许可；
+# 白名单外的许可证（含 GPL/AGPL/LGPL 等 copyleft）一律判红，须书面审查后才加入。
+allow = [
+  "0BSD",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "MIT",
+  "MPL-2.0",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "Zlib",
+]
+
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# §7.4：只允许 crates.io；镜像源（如开发机的 rsproxy）不改写 lock 里的来源记录。
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

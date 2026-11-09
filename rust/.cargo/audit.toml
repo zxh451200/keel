@@ -1,0 +1,5 @@
+[advisories]
+# rsa 0.9.10 仅作为 sqlx-mysql/sqlx-postgres 的可选分支进入 Cargo.lock，
+# 本项目只启用 sqlite；x86_64-pc-windows-msvc / linux-gnu 目标图均不含 rsa。
+# 无修复版本，按需求文档 §7.4 记录风险接受，复查日期 2027-01-31。
+ignore = ["RUSTSEC-2023-0071"]

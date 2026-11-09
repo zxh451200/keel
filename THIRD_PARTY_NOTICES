@@ -1,0 +1,75 @@
+# Third-Party Notices
+
+Keel 自身以 MIT 发布（见 `LICENSE`；`rust/Cargo.toml` 同样声明 `license = "MIT"`）。
+本文件汇总随发行物分发的第三方依赖许可。
+
+核对口径（见 `docs/REQUIREMENTS.md` §7.1）：**不采信元数据里的 license 字段，逐个读取依赖包内
+LICENSE 正文**。本轮核对日期：2026-11-01，核对对象为 `rust/Cargo.lock` 与 `pubspec.lock` 的锁定版本；
+版本变动后必须重跑第 4 节命令并复核。
+
+## 1. 直接依赖（按正文核对）
+
+| 依赖 | 锁定版本 | 正文判定 | 备注 |
+|---|---|---|---|
+| `flutter_rust_bridge`（Rust crate） | 2.13.0 | MIT | crates.io 发行包内**不含 LICENSE 正文**，只有 `Cargo.toml` 的 `license = "MIT"`；同一仓库的 Dart 包附 MIT 正文（版权人 fzyzcjy），据此判定。cargo-deny 按字段放行，发布前应在受控环境复核上游 LICENSE。 |
+| `allo-isolate`（FRB 传递依赖，静态链进产物） | 0.1.27 | Apache-2.0，**单一许可** | 用 `license-file = "LICENSE"` 而非 SPDX 字段，cargo-deny 报 `no-license-field` 警告并从正文识别出 Apache-2.0（无需 clarify 登记）；正文为纯 Apache-2.0，无附加条款。分发时保留其版权与 NOTICE 声明。 |
+| `argon2`（登录口令校验） | 0.5.3 | MIT OR Apache-2.0（双许可，按 MIT 分发） | 发行包内含 `LICENSE-MIT` 与 `LICENSE-APACHE` 正文（RustCrypto 项目）；传递依赖 `password-hash`、`blake2`（MIT OR Apache-2.0）、`base64ct`（Apache-2.0 OR MIT）、`rand_core`/`getrandom`（MIT OR Apache-2.0）随包附正文。 |
+| `tokio` | 1.54.1 | MIT | `license = "MIT"` 与 `LICENSE` 正文（Copyright (c) 2023 Tokio Contributors + MIT 条款）一致；本仓库只启用 `time` feature，runtime 由 FRB 创建。 |
+| `flutter_rust_bridge`（Dart 包） | 2.13.0 | MIT | `LICENSE` 正文为 MIT。 |
+| `cupertino_icons` | 1.0.9 | MIT | 字体图标资源，正文为 MIT（版权人 Vladimir Kharlampidi）。 |
+| `rust_builder/cargokit`（vendored 源码） | FRB 2.13.0 模板 | MIT（含 Apache-2.0 文本段） | `rust_builder/cargokit/LICENSE` 保留上游版权行（Copyright 2022 Matej Knopp），**不得删除**；其 `ffi` / `ffigen` 属 rust_builder 的 dev 依赖，未进入根 `pubspec.lock`，不随发行物。 |
+
+## 2. 传递依赖
+
+- Rust：`Cargo.lock` 共 208 个包（本仓库 1 个 + 第三方 207 个，2026-11-09 复核），全部来自 crates.io，
+  无 git / path / 自定义 registry 来源（`cargo deny check sources` 判绿）。
+  许可证表达式分布（`cargo license`）：`Apache-2.0 OR MIT` 147、`MIT` 27、`Unicode-3.0` 18、
+  `MIT OR Unlicense` 3、`Apache-2.0 OR MIT OR Zlib` 3、`(Apache-2.0 OR MIT) AND Unicode-3.0` 3、
+  `Zlib` 1（`foldhash`）、Custom License File 1（`allo-isolate`，实为 Apache-2.0）、`BSD-3-Clause` 1、
+  `Apache-2.0 OR BSL-1.0 OR MIT` 1（`whoami`）、`Apache-2.0 OR LGPL-2.1-or-later OR MIT` 1（`r-efi`，按 MIT/Apache 分发）、
+  `Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT` 1（`wasi`）、`0BSD OR Apache-2.0 OR MIT` 1（`adler2`）。
+  全部落在 §7.1 白名单内（`whoami`/`r-efi` 为多许可，按其中的 MIT/Apache 分发）；`syn` 存在 2.x / 3.x 双版本，
+  属 proc-macro（不随产物分发），`cargo deny check bans` 以警告提示。
+- Dart/Flutter：根 `pubspec.lock` 共 42 个包（35 hosted + 6 Flutter SDK + 1 本地 path）。
+  按 pub 缓存内 LICENSE 正文判定：BSD-3-Clause 28、Apache-2.0 4、MIT 3，其余为 SDK/path 与本地壳。
+  Flutter 引擎与框架自带的第三方许可全文由构建产物 `data/flutter_assets/NOTICES`
+  （Windows 下为 `NOTICES.Z`，gzip，解压约 1.3 MB）随包分发；2026-11-01 已确认
+  `flutter test integration_test -d windows` 构建后该文件存在。
+
+## 3. 例外、限制与待办
+
+- 白名单（`rust/deny.toml` [licenses] allow）在 §7.1 的 MIT / Apache-2.0 / BSD 之外收录
+  `0BSD`、`ISC`、`Zlib`、`MPL-2.0`、`Unicode-3.0`、`Unicode-DFS-2016`、
+  `Apache-2.0 WITH LLVM-exception`，均为宽松许可；白名单是政策清单，当前依赖图未命中的条目
+  只产生 `license-not-encountered` 提示。copyleft（GPL/AGPL/LGPL）与双许可取舍不明时 cargo-deny 直接判红，
+  须书面审查后才允许加白。
+- 2026-11-01 执行过 `cargo update`（仅在 semver 允许范围内），目的是清除 cargo-audit 报出的
+  `yanked` / `unsound` / `unmaintained`：`tokio` 1.34.0 → 1.54.1、`futures-util` 0.3.29 → 0.3.34、
+  `anyhow` → 1.0.104、`adler` → `adler2` 2.0.1、`miniz_oxide` → 0.9.1、`unicode-ident` → 1.0.27
+  （许可证表达式随之从 Unicode-DFS-2016 变为 Unicode-3.0）。更新后重跑过 cargo 门禁与 Windows 集成测试。
+- 开发机通过镜像取依赖：`~/.cargo/config.toml` 把 crates.io 替换为 `sparse+https://rsproxy.cn/index/`；
+  `C:\tools\bin\flutter` / `C:\tools\bin\dart` 包装脚本导出 `PUB_HOSTED_URL` 指向
+  `https://mirrors.tuna.tsinghua.edu.cn/dart-pub/`。本文件与 `pubspec.lock` 记录的正式来源是
+  `https://pub.dev`（触发重新解析的 dart 命令会把 lock 里的 `url:` 改写成镜像地址，版本与 sha256 不变，
+  提交前用 `git diff pubspec.lock` 复核还原）。发布构建必须在受控 CI 用官方 registry 重建，
+  并用 lock 内的 sha256 / checksum 比对同一包。
+  镜像环境下 `dart pub` 的安全公告拉取会失败（构建日志出现 `Unable to fetch advisories ... from mirrors.tuna`），
+  即 pub.dev 公告这一路在开发机不可用，必须在 CI 补。
+- OSV-Scanner 与 gitleaks 已接入 CI（`.github/workflows/ci.yml`，固定版本 + SHA-256 校验）：
+  `osv-scanner` 2.7.0 按 LICENSE 正文为 Apache-2.0，`gitleaks` 8.30.1 为 MIT；两者只在 CI/开发期使用，
+  不链接进发行物。CI 里 3 个 Action 固定到完整 commit SHA；没有采用需要 EULA 的 gitleaks Action。
+  本机实测：`cargo deny` 四项、`cargo audit`、OSV（`rust/Cargo.lock` 83 包 + `pubspec.lock` 42 包）、
+  gitleaks 全绿。SBOM（CycloneDX/SPDX）、签名与发布工作流、Defender 扫描记录属阶段 4，见 §7.4。
+
+## 4. 复现命令
+
+```bash
+bash scripts/security-check.sh          # 报告写入 build/reports/（已 gitignore）
+cd rust && cargo license                # 传递依赖许可证表达式
+cd rust && cargo deny check             # 许可证 / 来源 / 重复依赖 / 安全公告
+cd rust && cargo audit                  # RustSec 公告（需联网更新公告库）
+flutter pub deps --style=list           # Dart 依赖图
+```
+
+`cargo audit` 与 `cargo deny check advisories` 需访问 `https://github.com/RustSec/advisory-db`；
+离线或被网络策略阻断时这两项失败，属环境限制，须在 CI 中通过。

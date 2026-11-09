@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "RUSTSEC-2023-0071"
+ignoreUntil = 2027-01-31
+reason = "rsa 0.9.10 only in unused sqlx-mysql/postgres lockfile branches; sqlite-only target graph excludes it"

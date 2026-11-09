@@ -1,0 +1,27 @@
+# Dependabot：只负责发现更新并各开一个 PR，合并必须走 CI 门禁（需求文档 §7.4「升级单独提交并测试」）。
+# 合并前人工核对：许可证是否随版本变化、Cargo.lock/pubspec.lock 的来源字段是否被本机镜像改写。
+version: 2
+updates:
+  - package-ecosystem: "cargo"
+    directory: "/rust"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(deps)"
+
+  # CI Action 也是供应链：按 SHA 固定，由 Dependabot 提出 SHA 升级 PR。
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"

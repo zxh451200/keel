@@ -1,0 +1,746 @@
+{
+  "@@locale": "en",
+  "menuTimeZone": "Display time zone",
+  "timeZoneSystem": "System time zone",
+  "timeZoneUtc": "UTC",
+  "menuCurrency": "Default currency",
+  "currencyUnspecified": "Unspecified",
+  "currencyPreferenceNotice": "Supplies a default for new inputs without a currency. Does not convert amounts or change existing currencies.",
+  "userImportTitle": "Import users",
+  "userImportHint": "Paste JSONL with name and role (viewer or operator) on each line. Limits: 1 MiB, 1,000 rows, 4,096 bytes per row. The whole batch commits or rolls back.",
+  "userImportInput": "JSONL user records",
+  "userImportPreviewHint": "Review the batch. Rust validates every record again.",
+  "userImportPreviewAction": "Preview batch",
+  "userImportConfirmAction": "Import batch",
+  "userImportWaiting": "Waiting for the final result. A cancellation request does not confirm rollback.",
+  "userImportProgress": "Processed {processed} of {total} records; transaction not yet confirmed.",
+  "@userImportProgress": {
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "userImportStale": "The user or service changed. Close and prepare again.",
+  "userImportCancelled": "Import cancelled before commit.",
+  "userImportCancelFailed": "Cancellation request failed. Wait for the final result.",
+  "userImportDone": "{count, plural, =1{Created 1 user.} other{Created {count} users.}}",
+  "@userImportDone": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "appTitle": "Keel",
+  "auditDateRange": "Date range",
+  "auditDateRangeSelected": "{start} – {end}",
+  "@auditDateRangeSelected": {
+    "placeholders": {
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "auditDateRangeFrom": "From {date}",
+  "@auditDateRangeFrom": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "auditDateRangeThrough": "Through {date}",
+  "@auditDateRangeThrough": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "auditClearDates": "Clear dates",
+  "auditSortHint": "Click a column to add it to the sort; click again to flip direction; Ctrl+click to remove. Up to 3 columns, later ones tie-break earlier ones.",
+  "auditResetAll": "Reset all filters",
+  "auditDateRangeHint": "Local calendar dates, including both the start and end dates.",
+  "auditDateRangeApply": "Apply dates",
+  "auditExport": "Export filtered CSV",
+  "auditCopySave": "Save a copy…",
+  "auditCsvFilter": "CSV audit records",
+  "auditCopySaving": "Choosing a location or saving a copy…",
+  "auditCopySaved": "Copy saved to {path}",
+  "@auditCopySaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "auditCopyHint": "Choose a new .csv file; existing files are never replaced. Save a copy within 5 minutes of export completion. If the task has expired, export again. Review the file before sharing.",
+  "auditExportScope": "Export all matching audit records with the submitted filters and sort order, up to 100,000 rows / 64 MiB, to the app data exports folder. Includes actor names and UTC timestamps; review the file before sharing.",
+  "auditExportWorking": "Exporting audit records…",
+  "auditExportCancelling": "Cancelling export…",
+  "auditExportCancelled": "Export cancelled. No completed file was created.",
+  "auditExportOtherUser": "An export belongs to another user. Switch back to its owner to check or cancel it.",
+  "auditExportProgress": "Exported {done} of {total} rows",
+  "@auditExportProgress": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "navSettingsImport": "Import settings",
+  "settingsImportChooseFile": "Choose configuration file…",
+  "settingsImportJsonFilter": "JSON configuration",
+  "settingsImportInput": "Configuration JSON",
+  "settingsImportInputHint": "Paste configuration JSON (up to 1 MiB). Preview does not change settings. Import replaces language, theme, format locale and navigation preferences; open tabs and drafts are kept.",
+  "menuFormatLocale": "Format locale",
+  "formatLocaleSystem": "Follow system (supported regions; otherwise US)",
+  "formatLocaleUs": "English (United States)",
+  "formatLocaleGb": "English (United Kingdom)",
+  "formatLocaleCn": "Chinese (China)",
+  "totalCountFormatted": "{count} items",
+  "@totalCountFormatted": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "pagePositionFormatted": "Page {page} of {pages}",
+  "@pagePositionFormatted": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "pages": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeBytesFormatted": "{size} B",
+  "@backupSizeBytesFormatted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeExactBytesFormatted": "{size} bytes",
+  "@backupSizeExactBytesFormatted": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportLimit": "Enter non-empty configuration text no larger than 1 MiB in UTF-8.",
+  "settingsImportPreviewHint": "Review this masked preview before importing. Masking may not catch everything. Import uses the original snapshot, expires after 5 minutes and can be confirmed once. To preview again, paste the configuration again.",
+  "settingsImportConfirm": "Confirm import",
+  "settingsImportWorking": "Preparing or importing settings…",
+  "settingsImportReloadHint": "Settings were imported, but the display could not be refreshed. Preference changes are paused. Retry reading settings here before making changes, or restart the app.",
+  "settingsImportDone": "Settings imported and display refreshed.",
+  "settingsImportReadPaused": "Preferences paused — reopen import",
+  "settingsImportPreviewTitle": "Redacted preview",
+  "settingsImportPreviewEmpty": "The redacted preview appears here. Paste a configuration or choose a file, then select Preview.",
+  "settingsImportSizeCounter": "{used} / 1 MiB",
+  "@settingsImportSizeCounter": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportSnapshotVersion": "Configuration version v{version}",
+  "@settingsImportSnapshotVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsImportRedactedCount": "{count} sensitive field groups redacted",
+  "@settingsImportRedactedCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "auditPageHint": "Filter audit records by keyword and date range. Search, sorting and paging run on the local database.",
+  "backupPageHint": "Backups are stored in the app data folder. A restore takes effect on next start and keeps the current database.",
+  "diagPageHint": "Recent errors, warnings and diagnostic events. Events are redacted when written; stack traces and SQL parameters are not shown.",
+  "taskCurrentSection": "Current task",
+  "taskHistorySection": "Task history",
+  "taskHistoryEmpty": "No task history to show.",
+  "samplesPageHint": "Local acceptance page for the three bridge calls: sync string, sync struct and async struct. Results come from Rust and are not persisted.",
+  "errImport": "Configuration could not be imported. Check its format and version, then prepare a new preview.",
+  "menuFile": "File",
+  "menuView": "View",
+  "menuSidebar": "Sidebar",
+  "menuTools": "Tools",
+  "menuNoCommands": "No commands for this page",
+  "menuWindow": "Window",
+  "menuHelp": "Help",
+  "menuOpenPage": "Open page…",
+  "quickPageSearchTitle": "Open page",
+  "quickPageSearchHint": "Search pages",
+  "quickPageSearchEmpty": "No matching pages.",
+  "actionOpen": "Open",
+  "menuCloseTab": "Close tab",
+  "menuCloseOthers": "Close other tabs",
+  "menuCloseAll": "Close all tabs",
+  "menuAbout": "About",
+  "navCollapse": "Collapse navigation",
+  "navExpand": "Expand navigation",
+  "navModules": "Modules",
+  "navSidebarTitle": "Navigation",
+  "navFavorites": "Favorites",
+  "navRecent": "Recently visited",
+  "navFavoritesEmpty": "No favorites yet.",
+  "navRecentEmpty": "No recently visited pages.",
+  "navAddFavorite": "Add to favorites",
+  "navRemoveFavorite": "Remove from favorites",
+  "navFavoriteLimit": "You can save up to 50 favorites.",
+  "workspaceNavigationProtected": "Navigation preferences could not be loaded safely. Changes apply for this session only; the original file is protected. Repair the configuration before restarting.",
+  "workspaceNavigationSaving": "Saving navigation preferences…",
+  "workspaceNavigationUnsaved": "Navigation preferences could not be saved. Your changes apply for this session.",
+  "actionRetryNavigationSave": "Retry saving navigation",
+  "closeTabTooltip": "Close",
+  "navDiagnostics": "Diagnostics",
+  "diagMinLevel": "Minimum level",
+  "diagSearchId": "Diagnostic ID",
+  "diagSearchIdHint": "Exact ID, case sensitive",
+  "diagSearchIdInvalid": "Use no more than 128 Unicode characters and no control characters.",
+  "diagNoMatches": "No retained events match these filters. Check the ID and minimum level, or reset the filters.",
+  "diagSearchScope": "Search covers up to 500 events from this app session; up to 200 matches are shown. Older events may have been removed.",
+  "diagEmpty": "No events yet.",
+  "diagCopyId": "Copy diagnostic ID",
+  "diagIdCopied": "Diagnostic ID copied.",
+  "levelInfo": "Info",
+  "levelWarn": "Warning",
+  "levelError": "Error",
+  "actionRefresh": "Refresh",
+  "actionSearch": "Search",
+  "actionCopyRow": "Copy selected row",
+  "auditKeyboardHint": "Select a row with ↑/↓ or Home/End. Ctrl+C copies it; Esc clears selection.",
+  "auditRowCopied": "Selected row copied.",
+  "actionReset": "Reset",
+  "actionRetry": "Retry",
+  "actionDismiss": "Dismiss",
+  "actionClose": "Close",
+  "usersPageHint": "Create a local user and assign a role; permissions are enforced by the Rust boundary.",
+  "startupRestoreDone": "The database was restored from backup during this startup. Check the status bar to confirm it is ready.",
+  "startupRestoreFailed": "The backup restore did not complete during startup. Check Diagnostics for details and the status bar for database availability.",
+  "startupRestoreStatusFailed": "The startup restore result could not be read.",
+  "actionRetryDatabase": "Retry database",
+  "actionRetrySave": "Retry saving settings",
+  "databaseUnavailableHint": "Database features are unavailable. Retry or check Diagnostics for details.",
+  "databaseRetrying": "Opening the database again…",
+  "settingsUnsaved": "Settings could not be saved. Your changes apply for this session.",
+  "settingsSaving": "Saving settings…",
+  "settingsProtected": "Settings could not be loaded safely. Changes apply for this session only; the original file is protected. Check Diagnostics and repair the file before restarting.",
+  "menuNextTab": "Next tab",
+  "menuPreviousTab": "Previous tab",
+  "pagePosition": "Page {page} of {pages}",
+  "@pagePosition": {
+    "placeholders": {
+      "page": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "pages": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "loadFailed": "Load failed: {message}",
+  "@loadFailed": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "errValidation": "Invalid input. Please check and try again.",
+  "errNotFound": "The item no longer exists.",
+  "errGeneric": "Operation failed. Please try again.",
+  "errDiagnosticId": "(diagnostic ID: {id})",
+  "@errDiagnosticId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "navAudit": "Audit log",
+  "searchHint": "Search actor, action or target",
+  "emptyList": "No data",
+  "totalCount": "{count} items",
+  "@totalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "prevPage": "Previous",
+  "nextPage": "Next",
+  "colTime": "Time",
+  "colActor": "Actor",
+  "colAction": "Action",
+  "colTarget": "Target",
+  "colResult": "Result",
+  "statusDbReady": "Database: ready",
+  "statusDbUnavailable": "Database: unavailable",
+  "statusActiveOperations": "{count, plural, =1{1 operation in progress} other{{count} operations in progress}}",
+  "@statusActiveOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "statusActivityBackup": "Backup or restore operation / confirmation",
+  "statusActivityDiagnostics": "Preparing or exporting diagnostic pack",
+  "statusVersion": "Version {version}",
+  "@statusVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "errDuplicate": "That item already exists.",
+  "errPermission": "You don't have permission to do that.",
+  "noPermissionToView": "You don't have permission to view this page.",
+  "roleAdmin": "Administrator",
+  "roleOperator": "Operator",
+  "roleViewer": "Viewer",
+  "statusUser": "User: {name} ({role})",
+  "@statusUser": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "userMenuTooltip": "Switch or add user",
+  "menuNewUser": "New user...",
+  "userNameLabel": "User name",
+  "formErrorSummary": "Please fix the following errors.",
+  "navNewUser": "Create user",
+  "userRoleLabel": "Role",
+  "userNameRequired": "Enter a user name.",
+  "userNameTooLong": "Use no more than 32 Unicode characters.",
+  "userNameControl": "User names cannot contain control characters.",
+  "userCreating": "Creating…",
+  "unsavedTitle": "Discard unsaved changes?",
+  "unsavedMessage": "Your changes have not been saved. Discard them and continue?",
+  "actionDiscard": "Discard changes",
+  "actionKeepEditing": "Keep editing",
+  "closeCheckFailed": "The page could not be checked for closing. Your open pages were kept. Try again.",
+  "userCreate": "Create",
+  "userCreated": "User created.",
+  "actionCancel": "Cancel",
+  "actionSave": "Save",
+  "navBackup": "Backup and restore",
+  "backupNow": "Back up now",
+  "backupWorking": "A backup operation or confirmation is in progress. Please wait before closing.",
+  "backupEmpty": "No backups yet.",
+  "backupSizeBytes": "{count} B",
+  "@backupSizeBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "backupSizeKib": "{value} KiB",
+  "@backupSizeKib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeMib": "{value} MiB",
+  "@backupSizeMib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeGib": "{value} GiB",
+  "@backupSizeGib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeTib": "{value} TiB",
+  "@backupSizeTib": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "backupSizeExactBytes": "{count, plural, =1{1 byte} other{{count} bytes}}",
+  "@backupSizeExactBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "backupDone": "Backup created: {name}",
+  "@backupDone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "backupRestore": "Restore",
+  "backupRestoreTitle": "Restore from backup?",
+  "backupRestoreMessage": "The database will be replaced with {name} the next time the app starts. The current database is kept next to it, not deleted. Changes made after this backup will not be in the restored data.",
+  "@backupRestoreMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "backupRestoreScheduled": "Restore scheduled. It takes effect the next time the app starts.",
+  "backupRestorePending": "Restore from {name} will happen the next time the app starts.",
+  "@backupRestorePending": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "backupRestoreCancel": "Cancel restore",
+  "diagExport": "Export diagnostic pack",
+  "diagExportTitle": "Export diagnostic pack",
+  "diagExportHint": "This is exactly what will be written to the file. Sensitive values are masked by rules, which cannot catch everything, so please read it before exporting.",
+  "diagExportConfirm": "Export",
+  "diagPackSelectionHint": "Choose what to include. Nothing is collected until you select Preview.",
+  "diagPackRuntime": "App and system",
+  "diagPackRuntimeHint": "App version, operating system and processor architecture only. No user names, paths, settings or database records.",
+  "diagPackEvents": "Recent diagnostic events",
+  "diagPackEventsHint": "Up to 500 redacted events: time, level, area, error code, diagnostic ID and summary. Raw log files are excluded.",
+  "diagPackChooseCategory": "Choose at least one category to preview.",
+  "diagPackWorking": "Preparing or exporting the diagnostic pack. Please wait before closing.",
+  "diagPackReprepareHint": "Select Preview again before exporting.",
+  "diagPackEventCount": "{count, plural, =0{No diagnostic events included} =1{1 diagnostic event included} other{{count} diagnostic events included}}",
+  "@diagPackEventCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "diagPackSnapshotHint": "Export writes this snapshot only. It expires after 5 minutes and can be exported once. Changing categories requires a new preview.",
+  "diagPackPreview": "Preview",
+  "diagExportDone": "Exported to {path}",
+  "@diagExportDone": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "workspaceEmpty": "Open a page from the Modules menu.",
+  "workspaceShortcutHint": "Press Ctrl+K to open any page",
+  "uiUnderConstruction": "Rebuilding this page with Fluent",
+  "uiDashboard": "Workspace",
+  "statusOpenTabs": "{count, plural, =0{No open tabs} =1{1 open tab} other{{count} open tabs}}",
+  "@statusOpenTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "menuLanguage": "Language",
+  "langSystem": "Follow system",
+  "langZh": "简体中文",
+  "langEn": "English",
+  "menuTheme": "Theme",
+  "themeSystem": "Follow system",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "samplesNavLabel": "Bridge samples",
+  "formSamplesNavLabel": "Form samples",
+  "samplesTitle": "flutter_rust_bridge quickstart",
+  "sampleSyncString": "Sync string",
+  "sampleSyncStruct": "Sync struct",
+  "sampleAsyncStruct": "Async struct",
+  "sampleAction": "Action: {action}",
+  "@sampleAction": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      }
+    }
+  },
+  "sampleResult": "Result: {result}",
+  "@sampleResult": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "sampleRunning": "running…",
+  "sampleNotCalled": "not called yet",
+  "sampleCallAsync": "Call Rust asynchronously",
+  "navTasks": "Tasks",
+  "taskViewScope": "Shows your active audit CSV export task in this process. Use task history below for persisted metadata; running tasks interrupted by restart are marked interrupted and are not replayed.",
+  "taskViewEmpty": "No task is available to display.",
+  "taskPhaseCompleted": "Completed",
+  "taskPhaseFailed": "Failed",
+  "taskPhaseInterrupted": "Interrupted after restart",
+  "taskPhaseUnknown": "Status unknown",
+  "taskPhaseRunning": "Running",
+  "taskPhaseCancelled": "Cancelled",
+  "taskRefreshStatus": "Recheck status",
+  "formSamplesTitle": "Standard form (local interaction sample)",
+  "formSampleLocalNotice": "This page demonstrates input and local preview only. It writes no files or database records and calls no Rust business validation.",
+  "formSampleInternationalInputRules": "Display region: {region}. Use ASCII digits; integer input does not accept grouping. This sample uses exact nonnegative money from 0 to 9,999,999.99 with two decimal places: use . for decimals and optional , groups of three. Currency labels are preview-only and do not change the stored minor units. Date format: {datePattern}, years 1900–2100; time uses 24-hour HH:mm.",
+  "@formSampleInternationalInputRules": {
+    "placeholders": {
+      "region": {
+        "type": "String"
+      },
+      "datePattern": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleValuesSection": "Text, numbers and money",
+  "formSampleDatesSection": "Calendar date and local date-time",
+  "formSampleChoiceSection": "Enum selection",
+  "formSampleText": "Sample text",
+  "formSampleInteger": "Integer",
+  "formSampleAmount": "Amount (USD, fixed sample currency)",
+  "formSampleDate": "Calendar date (no timezone)",
+  "formSampleDateTime": "Local date-time",
+  "formSampleChoice": "Sample option",
+  "formSampleStandard": "Standard",
+  "formSamplePriority": "Priority",
+  "formSampleTextError": "Enter nonblank text with at most 80 Unicode scalar characters.",
+  "formSampleIntegerError": "Enter an integer from -2147483648 to 2147483647 without grouping, decimals or exponents.",
+  "formSampleAmountError": "Enter a USD amount from 0 to 9,999,999.99 using . decimals and optional , groups of three, with at most two decimal places. Leading zeros, signs, exponents and non-finite values are not accepted.",
+  "formSampleDateError": "Enter a valid calendar date in {pattern} format with a year from 1900 to 2100.",
+  "@formSampleDateError": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleDateTimeError": "Enter a valid local date-time in {pattern} format, with a year from 1900 to 2100. Times skipped by daylight saving are not accepted.",
+  "@formSampleDateTimeError": {
+    "placeholders": {
+      "pattern": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleTimeDisplayNotice": "A calendar date contains only year, month and day and is not converted to UTC. Date-time uses the host timezone. The preview can display the same instant as system local time or UTC. Repeated daylight-saving times follow the host choice; this sample provides no timezone selection or overlap resolution and is not for business scheduling.",
+  "formSampleUtc": "UTC",
+  "formSampleSystemLocal": "System local",
+  "formSampleTimeDisplay": "Time display",
+  "formSampleCurrency": "Currency",
+  "formSampleLocaleChanged": "The display region changed. Date text that was invalid in the previous format was retained; edit it using the current format.",
+  "formSamplePreviewAction": "Generate local preview",
+  "formSampleResetAction": "Reset draft",
+  "formSamplePreviewNotice": "Local in-memory preview only; nothing was saved to files or a database. The draft remains unpersisted and closing still requires confirmation.",
+  "formSampleInternationalPreview": "Text: {text}\nInteger: {integer}\nAmount: {amount}\nExact minor units: {minor}\nCalendar date (no timezone): {date}\nDate-time ({timeDisplay}): {dateTime}\nUTC epoch milliseconds: {epoch}\nOption: {choice}",
+  "@formSampleInternationalPreview": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "integer": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "minor": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      },
+      "dateTime": {
+        "type": "String"
+      },
+      "timeDisplay": {
+        "type": "String"
+      },
+      "epoch": {
+        "type": "String"
+      },
+      "choice": {
+        "type": "String"
+      }
+    }
+  },
+  "formSampleDiscardTitle": "Discard local draft?",
+  "formSampleDiscardMessage": "Input and preview exist only in local memory and have not been persisted. Discarding will lose this draft.",
+  "taskHistoryScope": "Shows your persisted audit CSV export history, newest first. Running tasks interrupted by restart are marked interrupted; terminal history is retained for 30 days up to 1,000 entries. History is read-only; active tasks remain in the current task section.",
+  "taskHistoryRefresh": "Refresh task list",
+  "diagHistoryTitle": "Historical diagnostic logs",
+  "diagHistoryText": "Text in redacted logs (case-sensitive)",
+  "diagHistoryScope": "Search this application's logs only: up to 14 files, 4 MiB scanned, 200 lines, and 2048 characters per line. Newest files first; original order within each file. Literal text only. Redaction may miss sensitive content.",
+  "diagHistoryTruncated": "Results are incomplete: a search limit was reached, or unsafe, invalid, overlong or incomplete content was skipped. No matches does not mean the text is absent from all historical logs.",
+  "diagHistoryEmpty": "No matching log lines were found in this bounded search.",
+  "actionPrint": "Print current page",
+  "printPreviewTitle": "Print preview",
+  "printCurrentPageHint": "Only the records on this loaded page will be sent to the system print dialog. Review the complete text before continuing.",
+  "printSubmitted": "The report was submitted to the printer. This does not confirm that printing has finished.",
+  "printCancelled": "Printing was cancelled.",
+  "errPrint": "The report could not be submitted. Check the printer and try again.",
+  "currentActivitiesScope": "Shows activities currently in progress in this session. Finished activities are removed; persisted audit export history is available on the Tasks page.",
+  "externalDiagnosticTitle": "Review external diagnostic text",
+  "externalDiagnosticInput": "External diagnostic text",
+  "externalDiagnosticHint": "Paste UTF-8 diagnostic text up to 1 MiB. Preview masks sensitive values without importing settings or changing the database. Binary files and archives are not supported.",
+  "externalDiagnosticPreviewHint": "Review the complete masked text. Masking may miss sensitive information. Export writes this snapshot once within 5 minutes; changing input requires a new preview.",
+  "navCustomers": "Customers & suppliers",
+  "customersHint": "Reference list with Rust-side validation and audit. Sample business module, not part of the Keel core scope.",
+  "customersReadOnly": "Your role can view this list but not change it.",
+  "customersNew": "New entry",
+  "customersEdit": "Edit entry",
+  "customersSearchHint": "Search code, name, phone or email",
+  "customersKindAll": "All types",
+  "customersStatusAny": "Any status",
+  "customersStatusActive": "Active only",
+  "customersStatusInactive": "Inactive only",
+  "customersColCode": "Code",
+  "customersColName": "Name",
+  "customersColKind": "Type",
+  "customersColContact": "Contact",
+  "customersColStatus": "Status",
+  "customersColUpdated": "Updated",
+  "customersEmpty": "No entries match the filters.",
+  "customersTotal": "Total: {count}",
+  "@customersTotal": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersPageOf": "Page {page} / {totalPage}",
+  "@customersPageOf": {
+    "placeholders": {
+      "page": {
+        "type": "int"
+      },
+      "totalPage": {
+        "type": "int"
+      }
+    }
+  },
+  "customersPrevious": "Previous",
+  "customersNext": "Next",
+  "customersSaved": "Saved.",
+  "kindCustomer": "Customer",
+  "kindSupplier": "Supplier",
+  "kindBoth": "Customer & supplier",
+  "customersActive": "Active",
+  "customersInactive": "Inactive",
+  "customersCode": "Code",
+  "customersName": "Name",
+  "customersKind": "Type",
+  "customersPhone": "Phone (optional)",
+  "customersEmail": "Email (optional)",
+  "customersNote": "Note (optional)",
+  "customersEnabled": "Active",
+  "customersSave": "Save",
+  "customersCancel": "Cancel",
+  "errCustomerCode": "Code must be 1-32 letters, digits, _ or -.",
+  "errCustomerName": "Name is required, 1-80 characters.",
+  "errCustomerPhone": "Phone may only contain digits, spaces, +, - and parentheses (max 32).",
+  "errCustomerEmail": "Email format is invalid.",
+  "errCustomerNote": "Note is limited to 500 characters.",
+  "customersCopy": "Copy",
+  "customersCopied": "Copied.",
+  "customersEnable": "Enable",
+  "customersDisable": "Disable",
+  "customersDelete": "Delete",
+  "customersDeleteTitle": "Delete entries?",
+  "customersDeleteMessage": "{count, plural, =1{Delete 1 entry? This cannot be undone.} other{Delete {count} entries? This cannot be undone.}}",
+  "@customersDeleteMessage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersDeleted": "Deleted {count}.",
+  "@customersDeleted": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "customersUpdatedCount": "Updated {count}.",
+  "@customersUpdatedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "navSecurity": "Sign-in protection",
+  "securityHint": "When protection is on, the app asks for a password before the workspace opens. Only a salted Argon2id hash is stored, never the password itself.",
+  "securityStatusOn": "Sign-in protection is on",
+  "securityStatusOff": "Sign-in protection is off",
+  "securityNoPassword": "No password has been set yet.",
+  "securityCurrent": "Current password",
+  "securityNew": "New password",
+  "securityConfirm": "Confirm new password",
+  "securityPasswordRule": "At least 8 characters; not the same character repeated.",
+  "securitySavePassword": "Save password",
+  "securityEnable": "Enable protection",
+  "securityDisable": "Disable protection",
+  "securityAdminOnly": "Only an admin can change sign-in protection.",
+  "securitySaved": "Saved.",
+  "securityLockNow": "Lock now",
+  "securityMismatch": "The two passwords do not match.",
+  "securityTooShort": "Use at least 8 characters.",
+  "loginHint": "Enter the access password to open Keel.",
+  "loginPassword": "Password",
+  "loginSubmit": "Sign in",
+  "loginWrongPassword": "Incorrect password.",
+  "loginPasswordRequired": "Enter the password.",
+  "loginDatabaseUnavailable": "The database is not ready. Retry before signing in.",
+  "errAuth": "Authentication failed.",
+  "noPageCommands": "No commands for this page."
+}

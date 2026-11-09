@@ -1,0 +1,224 @@
+# Keel 发布候选证据链。
+# v* 标签触发；标签保护须另在仓库 ruleset 配置，签名等发布门禁仍需独立放行。
+name: Release candidate
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.47.8"
+  FRB_CODEGEN_VERSION: "2.13.0"
+  OSV_SCANNER_VERSION: "2.7.0"
+  OSV_SCANNER_WINDOWS_SHA256: "9964ed64ec9a387391eb4cc006ad5c531154821aef29b793e02c448de4686438"
+  KEEL_TARGET_ARCH: "x86_64-pc-windows-msvc"
+  GITLEAKS_VERSION: "8.30.1"
+  GITLEAKS_WINDOWS_SHA256: "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e"
+
+jobs:
+  windows-release-candidate:
+    name: Windows 发布候选与证据
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: 验证标签来源
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [[ "$tag" != v* ]]; then
+            echo "::error::发布候选只能由 v* 标签触发"
+            exit 1
+          fi
+
+      - name: Rust 工具链
+        run: |
+          rustup show
+          rustup component add rustfmt clippy
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: 安装固定版本 codegen 与扫描工具
+        run: |
+          cargo install flutter_rust_bridge_codegen --version $env:FRB_CODEGEN_VERSION --locked
+          cargo install cargo-license cargo-deny cargo-audit --locked
+
+      - name: 解析并校验锁定依赖
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PUB_HOSTED_URL=https://pub.dev
+          flutter pub get --enforce-lockfile
+          (cd rust && cargo fetch --locked)
+
+      - name: 生成、门禁与 Windows Release
+        id: build
+        run: .\scripts\verify.ps1 -BuildRelease
+
+      - name: 安装校验过的扫描二进制
+        shell: bash
+        run: |
+          set -euo pipefail
+          tools="$(cygpath -u "$RUNNER_TEMP")/keel-tools"
+          mkdir -p "$tools"
+          curl -sSLf --retry 3 -o "$tools/osv-scanner.exe" \
+            "https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}/osv-scanner_windows_amd64.exe"
+          ( cd "$tools" && printf '%s  %s\n' "$OSV_SCANNER_WINDOWS_SHA256" osv-scanner.exe | sha256sum -c - )
+          curl -sSLf --retry 3 -o "$tools/gitleaks.zip" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_windows_x64.zip"
+          ( cd "$tools" && printf '%s  %s\n' "$GITLEAKS_WINDOWS_SHA256" gitleaks.zip | sha256sum -c - )
+          unzip -q -o "$tools/gitleaks.zip" gitleaks.exe -d "$tools"
+          echo "$(cygpath -w "$tools")" >> "$GITHUB_PATH"
+
+      - name: 严格安全扫描（未知公告库版本阻断）
+        id: scan
+        shell: bash
+        run: bash scripts/security-check.sh --strict
+
+      # 扫描失败仍生成诊断证据，但失败状态不会被清除，候选上传仍要求 success()。
+      - name: 组装候选目录与依赖元数据
+        id: assemble
+        if: ${{ !cancelled() && steps.build.outcome == 'success' && steps.scan.outputs.summary_path != '' }}
+        shell: pwsh
+        run: |
+          $releaseRoot = Join-Path $PWD "build/release"
+          $appRoot = Join-Path $releaseRoot "keel-windows-$env:GITHUB_REF_NAME"
+          if (Test-Path $appRoot) { throw "candidate directory already exists" }
+          New-Item -ItemType Directory -Force -Path $appRoot | Out-Null
+          Copy-Item -Recurse -Force "build/windows/x64/runner/Release/*" $appRoot
+          Copy-Item "LICENSE", "THIRD_PARTY_NOTICES", "CHANGELOG.md" $appRoot
+          if (-not (Test-Path "$appRoot/data/flutter_assets/NOTICES.Z")) {
+            throw "Flutter NOTICES.Z is missing from the Release output"
+          }
+          New-Item -ItemType Directory -Force -Path "$releaseRoot/metadata" | Out-Null
+          cargo metadata --manifest-path rust/Cargo.toml --locked --format-version 1 | Out-File -Encoding utf8 "$releaseRoot/metadata/cargo-metadata.json"
+          if ($LASTEXITCODE -ne 0) { throw "cargo metadata failed" }
+          dart pub deps --json | Out-File -Encoding utf8 "$releaseRoot/metadata/dart-deps.json"
+          if ($LASTEXITCODE -ne 0) { throw "dart pub deps failed" }
+
+      - name: 采集 Windows SDK SignTool 验签证据
+        id: signatures
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
+        run: |
+          New-Item -ItemType Directory -Force -Path build/reports | Out-Null
+          $sdkBin = Join-Path ([Environment]::GetFolderPath("ProgramFilesX86")) "Windows Kits/10/bin"
+          $signToolPath = Join-Path $sdkBin "missing/x64/signtool.exe"
+          if (Test-Path -LiteralPath $sdkBin -PathType Container) {
+            $sdkVersions = Get-ChildItem -LiteralPath $sdkBin -Directory |
+              Where-Object { $_.Name -match '^\d+\.\d+\.\d+\.\d+$' } |
+              Sort-Object { [version]$_.Name } -Descending
+            foreach ($sdkVersion in $sdkVersions) {
+              $sdkSignTool = Join-Path $sdkVersion.FullName "x64/signtool.exe"
+              if (Test-Path -LiteralPath $sdkSignTool -PathType Leaf) {
+                $signToolPath = $sdkSignTool
+                break
+              }
+            }
+          }
+          # No signing keys are used. Missing SDK or unsigned files remain blocking.
+          python -B scripts/collect_signature_evidence.py --root "build/release/keel-windows-$env:GITHUB_REF_NAME" --signtool $signToolPath --output build/reports/signature-evidence.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: 生成证据、目录完整性及 ZIP 摘要校验
+        id: evidence
+        if: ${{ !cancelled() && steps.assemble.outcome == 'success' }}
+        shell: bash
+        env:
+          SCAN_SUMMARY: ${{ steps.scan.outputs.summary_path }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/reports
+          app_root="build/release/keel-windows-${GITHUB_REF_NAME}"
+          python3 -B scripts/release_evidence.py \
+            --root "$app_root" --output "$app_root/evidence" \
+            --version "$GITHUB_REF_NAME" --commit "$GITHUB_SHA" \
+            --cargo-metadata build/release/metadata/cargo-metadata.json \
+            --dart-deps build/release/metadata/dart-deps.json \
+            --scan-summary "$SCAN_SUMMARY" 2>&1 | tee build/reports/evidence-generation.txt
+          python3 -B scripts/verify_release_evidence.py --root "$app_root" \
+            2>&1 | tee build/reports/evidence-root.txt
+          python3 -B scripts/package_release.py --root "$app_root" \
+            --zip "${app_root}.zip" 2>&1 | tee build/reports/evidence-package.txt
+          python3 -B scripts/release_evidence.py --hash-zip "${app_root}.zip" \
+            2>&1 | tee build/reports/evidence-zip-hash.txt
+          python3 -B scripts/verify_release_evidence.py --zip "${app_root}.zip" \
+            2>&1 | tee build/reports/evidence-zip-verify.txt
+
+      - name: 严格证据元数据门禁
+        id: strict_evidence
+        if: ${{ !cancelled() && steps.evidence.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # RustSec 快照已绑定；OSV 在线来源仍 unknown，不能宣称发布通过。
+          python3 -B scripts/verify_release_evidence.py \
+            --root "build/release/keel-windows-${GITHUB_REF_NAME}" --strict \
+            2>&1 | tee build/reports/evidence-strict.txt
+
+      - name: 核对验签报告与最终候选字节
+        id: signature_binding
+        if: ${{ !cancelled() && steps.signatures.outcome == 'success' && steps.evidence.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B scripts/verify_signature_evidence.py \
+            --root "build/release/keel-windows-${GITHUB_REF_NAME}" \
+            --report build/reports/signature-evidence.json --commit "$GITHUB_SHA" \
+            --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            2>&1 | tee build/reports/signature-binding.txt
+
+      - name: 记录发布校验执行状态
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+          SCAN_OUTCOME: ${{ steps.scan.outcome }}
+          ASSEMBLE_OUTCOME: ${{ steps.assemble.outcome }}
+          SIGNATURES_OUTCOME: ${{ steps.signatures.outcome }}
+          SIGNATURE_BINDING_OUTCOME: ${{ steps.signature_binding.outcome }}
+          EVIDENCE_OUTCOME: ${{ steps.evidence.outcome }}
+          STRICT_EVIDENCE_OUTCOME: ${{ steps.strict_evidence.outcome }}
+        run: |
+          New-Item -ItemType Directory -Force -Path build/reports | Out-Null
+          @{ status = $env:JOB_STATUS; build = $env:BUILD_OUTCOME; scan = $env:SCAN_OUTCOME;
+             assemble = $env:ASSEMBLE_OUTCOME; signatures = $env:SIGNATURES_OUTCOME;
+             signature_binding = $env:SIGNATURE_BINDING_OUTCOME; evidence = $env:EVIDENCE_OUTCOME;
+             strict_evidence = $env:STRICT_EVIDENCE_OUTCOME } |
+            ConvertTo-Json | Set-Content -Encoding utf8 build/reports/release-status.json
+
+      - name: 上传失败诊断与证据
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-diagnostics-${{ github.ref_name }}
+          path: |
+            build/reports/
+            build/release/metadata/
+            build/release/*/evidence/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: 上传通过全部门禁的候选
+        if: ${{ success() && steps.scan.outcome == 'success' && steps.evidence.outcome == 'success' && steps.strict_evidence.outcome == 'success' && steps.signatures.outcome == 'success' && steps.signature_binding.outcome == 'success' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: keel-release-candidate-${{ github.ref_name }}
+          path: |
+            build/release/
+            build/reports/signature-evidence.json
+            build/reports/signature-binding.txt
+          if-no-files-found: error
+          retention-days: 30
