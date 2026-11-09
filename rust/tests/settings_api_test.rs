@@ -20,7 +20,8 @@ async fn settings_round_trip_and_error_mapping() {
     let dir = std::env::temp_dir().join(format!("keel-settings-api-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     let previous_dir = std::env::var_os("KEEL_DATA_DIR");
-    std::env::set_var("KEEL_DATA_DIR", &dir);
+    // SAFETY: 本集成测试二进制只跑这一个测试，写入发生在启动连接池/其他线程之前。
+    unsafe { std::env::set_var("KEEL_DATA_DIR", &dir) };
 
     // 没有文件：默认值。
     let initial = load_settings().unwrap();
@@ -418,7 +419,8 @@ async fn settings_round_trip_and_error_mapping() {
     assert_eq!(load_settings().unwrap().language.as_deref(), Some("zh"));
 
     // 相对路径的数据目录被拒绝。
-    std::env::set_var("KEEL_DATA_DIR", "relative/dir");
+    // SAFETY: 仍在同一测试内，单测试进程无并发环境变量读者。
+    unsafe { std::env::set_var("KEEL_DATA_DIR", "relative/dir") };
     assert_eq!(load_settings().unwrap_err().code, "KEEL-VALIDATION");
     assert_eq!(
         load_workspace_navigation_preferences().unwrap_err().code,
@@ -443,9 +445,10 @@ async fn settings_round_trip_and_error_mapping() {
         "KEEL-VALIDATION"
     );
 
+    // SAFETY: 测试即将结束，恢复原值不会与其他线程并发读写环境变量。
     match previous_dir {
-        Some(value) => std::env::set_var("KEEL_DATA_DIR", value),
-        None => std::env::remove_var("KEEL_DATA_DIR"),
+        Some(value) => unsafe { std::env::set_var("KEEL_DATA_DIR", value) },
+        None => unsafe { std::env::remove_var("KEEL_DATA_DIR") },
     }
     remove_test_dir(&dir);
 }

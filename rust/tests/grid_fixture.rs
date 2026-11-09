@@ -460,10 +460,10 @@ impl BufRead for InterruptedInput<'_> {
 
     fn consume(&mut self, amount: usize) {
         self.input.consume(amount);
-        if self.input.position() as usize >= self.boundary {
-            if let Some(cancel) = self.cancel {
-                cancel.cancel();
-            }
+        if self.input.position() as usize >= self.boundary
+            && let Some(cancel) = self.cancel
+        {
+            cancel.cancel();
         }
     }
 }

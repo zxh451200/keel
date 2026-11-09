@@ -179,14 +179,13 @@ fn mask_abs_paths(s: &str) -> String {
                     b'"' | b'\'' | b'(' | b'[' | b'{' | b'=' | b',' | b';' | b':'
                 )
         };
-        if boundary {
-            if let Some(len) = path_len(&s[i..]) {
-                if !s[i..i + len].contains("<user>") {
-                    out.push_str("<path>");
-                    i += len;
-                    continue;
-                }
-            }
+        if boundary
+            && let Some(len) = path_len(&s[i..])
+            && !s[i..i + len].contains("<user>")
+        {
+            out.push_str("<path>");
+            i += len;
+            continue;
         }
         match s[i..].chars().next() {
             Some(ch) => {
@@ -248,12 +247,10 @@ fn mask_phones(s: &str) -> String {
                     b'"' | b'\'' | b'(' | b'[' | b'{' | b',' | b';' | b'=' | b':'
                 )
         };
-        if boundary {
-            if let Some(len) = phone_len(&s[i..]) {
-                out.push_str(MASK);
-                i += len;
-                continue;
-            }
+        if boundary && let Some(len) = phone_len(&s[i..]) {
+            out.push_str(MASK);
+            i += len;
+            continue;
         }
         match s[i..].chars().next() {
             Some(ch) => {

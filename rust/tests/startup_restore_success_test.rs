@@ -19,7 +19,8 @@ async fn restored_status_survives_preparation_failures_and_retries() {
         std::process::id()
     ));
     std::fs::create_dir_all(&dir).unwrap();
-    std::env::set_var("KEEL_DATA_DIR", &dir);
+    // SAFETY: 本集成测试二进制只跑这一个测试，写入发生在启动连接池/其他线程之前。
+    unsafe { std::env::set_var("KEEL_DATA_DIR", &dir) };
     let path = dir.join("keel.db");
     let backup_dir = backup::backups_dir(&path);
     std::fs::create_dir_all(&backup_dir).unwrap();
@@ -122,7 +123,8 @@ async fn restored_status_survives_preparation_failures_and_retries() {
             .unwrap();
     assert_eq!(starts, 1);
     state::pool().unwrap().close().await;
-    std::env::remove_var("KEEL_DATA_DIR");
+    // SAFETY: 池已关闭，测试即将结束，无其他线程读取该环境变量。
+    unsafe { std::env::remove_var("KEEL_DATA_DIR") };
     remove_test_dir(&dir);
 }
 

@@ -43,10 +43,10 @@ pub async fn list(
 
 /// 列表与导出共用半开时间范围校验；不转换时区，也不对 i64 边界做算术。
 pub fn validate_date_range(start: Option<i64>, end: Option<i64>) -> Result<(), KeelError> {
-    if let (Some(start), Some(end)) = (start, end) {
-        if start >= end {
-            return Err(KeelError::Validation("审计开始时间必须早于结束时间".into()));
-        }
+    if let (Some(start), Some(end)) = (start, end)
+        && start >= end
+    {
+        return Err(KeelError::Validation("审计开始时间必须早于结束时间".into()));
     }
     Ok(())
 }

@@ -12,7 +12,8 @@ async fn real_api_uses_only_app_logs_and_existing_diagnostic_permission() {
         .join(format!("keel-history-api-{}", std::process::id()));
     std::fs::create_dir_all(dir.join("logs")).unwrap();
     let previous = std::env::var_os("KEEL_DATA_DIR");
-    std::env::set_var("KEEL_DATA_DIR", &dir);
+    // SAFETY: 本集成测试二进制只跑这一个测试，写入发生在启动连接池/其他线程之前。
+    unsafe { std::env::set_var("KEEL_DATA_DIR", &dir) };
     let db = dir.join("main.db");
     let pool = data::open(&db).await.unwrap();
     state::set_db_path(&db);
@@ -59,10 +60,11 @@ async fn real_api_uses_only_app_logs_and_existing_diagnostic_permission() {
         .code,
         "KEEL-PERMISSION"
     );
+    // SAFETY: 同上，测试即将结束，恢复原值不会与其他线程并发读写环境变量。
     if let Some(value) = previous {
-        std::env::set_var("KEEL_DATA_DIR", value);
+        unsafe { std::env::set_var("KEEL_DATA_DIR", value) };
     } else {
-        std::env::remove_var("KEEL_DATA_DIR");
+        unsafe { std::env::remove_var("KEEL_DATA_DIR") };
     }
     pool.close().await;
     remove_test_dir(&dir);

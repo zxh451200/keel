@@ -20,7 +20,8 @@ async fn failed_restore_keeps_original_database_and_event_identity() {
         std::process::id()
     ));
     std::fs::create_dir_all(&dir).unwrap();
-    std::env::set_var("KEEL_DATA_DIR", &dir);
+    // SAFETY: 本集成测试二进制只跑这一个测试，写入发生在启动连接池/其他线程之前。
+    unsafe { std::env::set_var("KEEL_DATA_DIR", &dir) };
     let path = dir.join("keel.db");
     let pool = data::open(&path).await.unwrap();
     data::audit::insert(&pool, 1, "local", "test.original", "keel", "ok", "")
@@ -64,7 +65,8 @@ async fn failed_restore_keeps_original_database_and_event_identity() {
             .unwrap();
     assert_eq!(originals, 1);
     state::pool().unwrap().close().await;
-    std::env::remove_var("KEEL_DATA_DIR");
+    // SAFETY: 池已关闭，测试即将结束，无其他线程读取该环境变量。
+    unsafe { std::env::remove_var("KEEL_DATA_DIR") };
     remove_test_dir(&dir);
 }
 

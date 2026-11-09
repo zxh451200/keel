@@ -254,12 +254,12 @@ async fn save_preferences_at(
     }
     let available_pool = pool.or_else(|| state::pool().ok());
     // 满队列且数据库已恢复时先尝试排空，避免每次保存都在补写前被拒绝。
-    if !changed_fields.is_empty() && config.pending_audit_len() >= MAX_PENDING_SETTINGS_AUDIT {
-        if let Some(pool) = available_pool {
-            if let Err(error) = flush_locked(path, pool, &mut config).await {
-                warn_pending(&error);
-            }
-        }
+    if !changed_fields.is_empty()
+        && config.pending_audit_len() >= MAX_PENDING_SETTINGS_AUDIT
+        && let Some(pool) = available_pool
+        && let Err(error) = flush_locked(path, pool, &mut config).await
+    {
+        warn_pending(&error);
     }
     if !changed_fields.is_empty() {
         // 满队列拒绝新持久变更，原配置/队列均不动；可单独 flush 或无变化保存来排空。
@@ -282,10 +282,10 @@ async fn save_preferences_at(
         config::save(path, &config)?;
     }
     // 偏好与事件已一同落盘，此后所有失败只告警；无变化也可重试既有队列。
-    if let Some(pool) = available_pool {
-        if let Err(error) = flush_locked(path, pool, &mut config).await {
-            warn_pending(&error);
-        }
+    if let Some(pool) = available_pool
+        && let Err(error) = flush_locked(path, pool, &mut config).await
+    {
+        warn_pending(&error);
     }
     Ok(())
 }
@@ -467,12 +467,11 @@ async fn ensure_audit_capacity_locked(
     current: &mut AppConfig,
     pool: Option<&SqlitePool>,
 ) -> Result<(), KeelError> {
-    if current.pending_audit_len() >= MAX_PENDING_SETTINGS_AUDIT {
-        if let Some(pool) = pool {
-            if let Err(error) = flush_locked(path, pool, current).await {
-                warn_pending(&error);
-            }
-        }
+    if current.pending_audit_len() >= MAX_PENDING_SETTINGS_AUDIT
+        && let Some(pool) = pool
+        && let Err(error) = flush_locked(path, pool, current).await
+    {
+        warn_pending(&error);
     }
     if current.pending_audit_len() >= MAX_PENDING_SETTINGS_AUDIT {
         return Err(KeelError::Import(
@@ -491,10 +490,10 @@ async fn persist_import_failure_locked(
     ensure_audit_capacity_locked(path, &mut current, pool).await?;
     current.pending_settings_import_audit.push(event);
     config::save(path, &current)?;
-    if let Some(pool) = pool {
-        if let Err(error) = flush_locked(path, pool, &mut current).await {
-            warn_pending(&error);
-        }
+    if let Some(pool) = pool
+        && let Err(error) = flush_locked(path, pool, &mut current).await
+    {
+        warn_pending(&error);
     }
     Ok(())
 }
@@ -525,10 +524,10 @@ async fn import_external_config_locked(
         .validate()
         .map_err(|_| KeelError::Import("合并后的配置校验失败".into()))?;
     config::save(path, &current).map_err(|_| KeelError::Import("外部配置写入失败".into()))?;
-    if let Some(pool) = pool {
-        if let Err(error) = flush_locked(path, pool, &mut current).await {
-            warn_pending(&error);
-        }
+    if let Some(pool) = pool
+        && let Err(error) = flush_locked(path, pool, &mut current).await
+    {
+        warn_pending(&error);
     }
     Ok(())
 }

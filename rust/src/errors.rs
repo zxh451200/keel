@@ -127,10 +127,10 @@ impl From<std::io::Error> for KeelError {
 impl From<sqlx::Error> for KeelError {
     fn from(e: sqlx::Error) -> Self {
         // 唯一约束冲突转成业务错误，其余归为 KEEL-DB。
-        if let sqlx::Error::Database(db) = &e {
-            if db.is_unique_violation() {
-                return KeelError::Duplicate;
-            }
+        if let sqlx::Error::Database(db) = &e
+            && db.is_unique_violation()
+        {
+            return KeelError::Duplicate;
         }
         KeelError::Db(e)
     }

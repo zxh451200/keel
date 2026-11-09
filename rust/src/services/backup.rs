@@ -266,10 +266,10 @@ fn unique_temp_path(path: &Path, suffix: &str) -> PathBuf {
 
 fn write_restore_marker(db_path: &Path, name: &str) -> Result<(), KeelError> {
     let marker = marker_path(db_path);
-    if let Ok(metadata) = std::fs::symlink_metadata(&marker) {
-        if metadata.file_type().is_symlink() {
-            return Err(KeelError::Validation("恢复标记路径不安全".into()));
-        }
+    if let Ok(metadata) = std::fs::symlink_metadata(&marker)
+        && metadata.file_type().is_symlink()
+    {
+        return Err(KeelError::Validation("恢复标记路径不安全".into()));
     }
     let tmp = unique_temp_path(db_path, ".restore-pending-tmp");
     let mut options = std::fs::OpenOptions::new();

@@ -221,22 +221,22 @@ impl AppConfig {
         if !(1..=CURRENT_VERSION).contains(&self.version) {
             return Err(KeelError::Validation("配置文件版本不支持".into()));
         }
-        if let Some(language) = &self.language {
-            if !matches!(language.as_str(), "zh" | "en") {
-                return Err(KeelError::Validation("language 需为 zh 或 en".into()));
-            }
+        if let Some(language) = &self.language
+            && !matches!(language.as_str(), "zh" | "en")
+        {
+            return Err(KeelError::Validation("language 需为 zh 或 en".into()));
         }
-        if let Some(theme) = &self.theme {
-            if !matches!(theme.as_str(), "light" | "dark") {
-                return Err(KeelError::Validation("theme 需为 light 或 dark".into()));
-            }
+        if let Some(theme) = &self.theme
+            && !matches!(theme.as_str(), "light" | "dark")
+        {
+            return Err(KeelError::Validation("theme 需为 light 或 dark".into()));
         }
-        if let Some(locale) = &self.format_locale {
-            if !matches!(locale.as_str(), "en_US" | "en_GB" | "zh_CN") {
-                return Err(KeelError::Validation(
-                    "format_locale 需为 en_US、en_GB 或 zh_CN".into(),
-                ));
-            }
+        if let Some(locale) = &self.format_locale
+            && !matches!(locale.as_str(), "en_US" | "en_GB" | "zh_CN")
+        {
+            return Err(KeelError::Validation(
+                "format_locale 需为 en_US、en_GB 或 zh_CN".into(),
+            ));
         }
         RegionalPreferences {
             time_zone: self.time_zone.clone(),

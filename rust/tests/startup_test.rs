@@ -17,7 +17,8 @@ async fn failed_start_can_retry_without_publishing_a_partial_pool() {
         .as_nanos();
     let dir = std::env::temp_dir().join(format!("keel-startup-{}-{nonce}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    std::env::set_var("KEEL_DATA_DIR", &dir);
+    // SAFETY: 本集成测试二进制只跑这一个测试，写入发生在启动连接池/其他线程之前。
+    unsafe { std::env::set_var("KEEL_DATA_DIR", &dir) };
     let path = dir.join("keel.db");
     let pool = data::open(&path).await.unwrap();
     sqlx::query(
@@ -56,7 +57,8 @@ async fn failed_start_can_retry_without_publishing_a_partial_pool() {
     assert_eq!(app::startup_restore_status(), none);
     assert_eq!(app::startup_restore_status(), none);
     state::pool().unwrap().close().await;
-    std::env::remove_var("KEEL_DATA_DIR");
+    // SAFETY: 池已关闭，测试即将结束，无其他线程读取该环境变量。
+    unsafe { std::env::remove_var("KEEL_DATA_DIR") };
     remove_test_dir(&dir);
 }
 

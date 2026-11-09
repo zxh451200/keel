@@ -691,7 +691,7 @@ fn copy_destination(value: &str) -> Result<PathBuf, KeelError> {
 #[cfg(windows)]
 fn check_local_drive(drive: u8) -> Result<(), KeelError> {
     #[link(name = "kernel32")]
-    extern "system" {
+    unsafe extern "system" {
         fn GetDriveTypeW(root_path: *const u16) -> u32;
     }
     let root = [u16::from(drive), b':' as u16, b'\\' as u16, 0];

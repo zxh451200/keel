@@ -1,0 +1,13 @@
+# 显式固定 rustfmt 格式版本，而不是跟随 crate edition。
+#
+# 背景：crate 已升到 edition 2024，rustfmt 默认会改用 style edition 2024，
+# 该样式会重排 `use` 括号内的条目（例如 `{transform_result_dco, Lifetimeable, Lockable}`
+# 变成 `{Lifetimeable, Lockable, transform_result_dco}`）。
+# 但 `src/frb_generated.rs` 是 flutter_rust_bridge 生成物：按 AGENTS.md §4/§10 不得手改，
+# 且 CI 会在 `cargo fmt --all --check` 之前重跑 codegen 并用 `git diff` 比对生成物
+# （.github/workflows/ci.yml 的生成差异门禁）。生成器模板仍按旧顺序书写，
+# 若把生成物按 2024 样式重排，重跑 codegen 就会立刻产生差异并使 CI 失败。
+#
+# 因此这里固定 style_edition = 2021，使手写代码与生成物共用同一格式版本；
+# 待升级 FRB 到能产出符合 2024 样式的生成物后，删除本文件即可整体切换。
+style_edition = "2021"

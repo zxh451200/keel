@@ -54,10 +54,10 @@ pub fn validate_password(password: &str) -> Result<(), KeelError> {
         return Err(KeelError::Validation("口令不能包含控制字符".into()));
     }
     let mut chars = password.chars();
-    if let Some(first) = chars.next() {
-        if chars.all(|c| c == first) {
-            return Err(KeelError::Validation("口令不能是同一个字符重复".into()));
-        }
+    if let Some(first) = chars.next()
+        && chars.all(|c| c == first)
+    {
+        return Err(KeelError::Validation("口令不能是同一个字符重复".into()));
     }
     Ok(())
 }
@@ -98,10 +98,10 @@ pub async fn set_password(
     validate_password(new_password)?;
     let _guard = AUTH_LOCK.lock().await;
     let row = load_row(pool).await?;
-    if let Some(hash) = row.password_hash.as_deref() {
-        if !current_password.is_some_and(|current| verify_password(hash, current)) {
-            return Err(KeelError::Auth);
-        }
+    if let Some(hash) = row.password_hash.as_deref()
+        && !current_password.is_some_and(|current| verify_password(hash, current))
+    {
+        return Err(KeelError::Auth);
     }
     let hash = hash_password(new_password)?;
     auth_data::save(pool, Some(&hash), row.login_required, audit::now_ms()).await?;
