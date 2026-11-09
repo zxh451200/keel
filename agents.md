@@ -4,6 +4,17 @@
 
 ## 0. 当前状态（先读，别假设）
 
+- 2026-11-09 网格锁定与首个生产接线：根依赖加入 `trina_grid: 2.4.0`（MIT，ADR-012），
+  根锁由 pub.dev 重解为 110 项（102 hosted，新增 52 包：MIT/BSD-3-Clause/Apache-2.0，
+  无 copyleft/未知；`jni` 被注册为 Windows/Linux 的 FFI 插件）。往来单位示例页
+  （`lib/ui/pages/customers_page.dart`）改用网格行选择/虚拟滚动/快捷键，编辑仍走对话框，
+  Ctrl/Shift 多选、TSV 复制、只读角色、分页与最小窗口行为由测试固定；单元格内联编辑与
+  区域粘贴仍未接生产。`flutter test` **188 项全过**，analyze 0、format 0；
+  `integration-check.ps1 -Device windows` 在接入后的最终树上 **7/7 PASS**
+  （`build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json`，
+  09:41–10:05 UTC，native 构建含 `jni` FFI 插件）。平台矩阵（真实 OS 焦点/DPI/读屏/Linux）
+  仍 NOT RUN。
+
 - 2026-11-09 页面滚动结构修正：审计 / 备份 / 诊断 / 登录保护 / 往来单位共用的 `UiScrollablePage`
   原先回退阈值固定 640（往来单位显式 720），在 1280×720 @125%（页面可用高度约 440）就会触发整页
   滚动，与表格/列表自身的纵向滚动条叠成两条（用户截图反馈）。改为宽页面（可用宽度 ≥ 760）只在
@@ -14,6 +25,27 @@
   直接可见（把阈值临时恢复 640 时这两项即失败，已验证灵敏度）。门禁实跑：`flutter analyze` 0 项、
   `flutter test` 186 项全过（180 → +6）、`check_sources.py` PASS、改动文件 format 无差异。Rust 未改，
   未重跑 cargo 门禁；滚动条外观与 125% 真机窗口仍需人工复核。
+
+- 2026-11-09 Rust edition 2024：`rust/Cargo.toml` 由 2021 升到 2024（`unsafe extern`、unsafe `set_var`、
+  let-chain 折叠等最小迁移）；因 FRB 生成物仍按旧样式输出且 CI 有生成差异门禁，新增
+  `rust/rustfmt.toml` 固定 `style_edition = "2021"`，待 FRB 能产出 2024 样式后删除。门禁实跑：
+  `cargo fmt --all --check`、`clippy --locked --all-targets -D warnings`、`cargo test --locked`
+  全绿（26 个测试二进制、172 项通过，lib 95 项，0 失败）；Cargo.lock 未变。
+  同批补 I02 自动化：新增 `test/core/format_locale_system_test.dart`、`test/ui/regional_display_test.dart`、
+  `test/ui/shell_regional_menu_test.dart` 共 13 项，覆盖系统 locale 跟随/显式固定、视图菜单落盘、
+  审计时间列按区域与时区重排；根 `flutter test` 本批 167 → 180，同日后续批次到 186，analyze 0、format 0。
+  真实 OS 区域事件、DST/负偏移与平台矩阵仍未验证。
+
+- 2026-11-09 Windows 桌面交互与 P02 证据：新增第 7 个集成入口
+  `integration_test/interaction_memory_test.dart`，在真实窗口 + 真实 Rust 库下验证
+  审计表 ↓/↑/End/Home/Esc 选择、Ctrl+K 浮层按键不穿透且 Esc 后恢复、关闭标签后按键不误触，
+  以及备份页选择/Enter 确认/Cancel/Esc 行为（用按钮可用性与行高亮断言，不动真实剪贴板）；
+  同进程 5 轮打开-筛选-翻页-关闭-重开采样 RSS（接入 trina 后）：611.6→628.2→651.1→669.6→673.4→673.2 MB，
+  首末 +58.7 MiB，无遗留 busy、末轮可重开。`integration-check.ps1 -Device windows` **7/7 PASS**
+  （`build/reports/integration-windows-a505642b3ef24f2d91a782c98430441e/summary.json`）。
+  边界：RSS 为 debug 构建 + 测试种子，隐藏页长任务、CPU/订阅计数、Linux 与 DPI/读屏仍 NOT RUN；
+  Ctrl+W 仅在外壳焦点子树内生效（点工具条后焦点在外壳外）已记录，未改行为。
+
 
 - 2026-11-09 最小窗口兜底：新增 `UiScrollablePage`（可用高度 < 640 时整页滚动并按 640 布局），
   备份 / 诊断 / 审计 / 往来单位 / 登录保护五页接入；`UiEmpty` 在可用高度小于内容时改为内部滚动；
@@ -401,7 +433,7 @@
 | 日志 | tracing + tracing-subscriber | 结构化日志与诊断事件 |
 | Rust 错误 | thiserror / anyhow | 领域/API 用可识别类型；工具层可带上下文 |
 | Flutter 状态 | flutter_riverpod + 本地状态 | 共享/异步用 Provider；纯局部留在 Widget；不建第二套状态框架 |
-| 数据网格 | PlutoGrid（MIT，候选） | 未验收；不通过换组件，不自研完整引擎 |
+| 数据网格 | trina_grid 2.4.0（MIT，已锁定） | 2026-11-09 同用例对比后锁定（ADR-012）；缺陷 6/7 的固定绕法见 `docs/GRID_POC.md`；平台矩阵仍开放，不自研完整引擎 |
 | UI 视觉 | Flutter 组件 + Keel 设计令牌；可 POC fluent_ui | 专业桌面惯例，不做网页式大卡片 Dashboard |
 | 国际化 | flutter_localizations + intl + ARB | 可见文字全部进资源文件 |
 | 配置 | 版本化配置文件 + 系统用户目录 | 可变数据不进安装目录；敏感信息不明文存普通配置 |
@@ -412,9 +444,9 @@
 - Rust 用当前 stable，记录在 `rust-toolchain.toml`；CI 与开发机同一工具链，不跟随 nightly。
 - Flutter/Dart 用 stable 同一已验证版本，CI 固定版本。
 - FRB 用稳定版，固定 codegen + 运行时兼容组合。
-- SQLx、PlutoGrid、Riverpod 等先通过 Windows 构建与关键行为测试，再锁进 lock 文件。
+- SQLx、trina_grid、Riverpod 等先通过 Windows 构建与关键行为测试，再锁进 lock 文件。
 - 正式版本不用浮动 Git 分支；必须用 Git 依赖时锁到 commit 并记录原因。
-- 调研参考值：FRB 2.13.0、SQLx 0.9、PlutoGrid 8.1.0——不等于可直接使用，须 POC 后锁定。
+- 调研参考值：FRB 2.13.0、SQLx 0.9、trina_grid 2.4.0——版本锁定见 ADR-012，升级须重跑 POC 用例。
 
 ### 2.3 关于“原生桌面”的准确说明
 
@@ -571,11 +603,12 @@ keel/
 - ADR-002 Flutter 作桌面 UI——选定基线，须 POC。
 - ADR-003 FRB 作桥接——通过；POC 起点版本 2.13.0（codegen 与运行时一致），最终版本 POC 后锁定。
 - ADR-004 SQLite + SQLx——通过；具体版本 POC 后锁定；PG/MySQL 单独立项。
-- ADR-005 PlutoGrid 优先候选——未验收；不通过换组件，不自研完整引擎。
+- ADR-005 PlutoGrid 优先候选——其中“首选候选”部分由 ADR-012 取代（2026-11-09 锁定 trina_grid 2.4.0）；
+  “不通过换组件、不自研完整引擎”的边界不变。
 - ADR-006 遵循社区惯例，不建私有框架——通过；不建 DSL/事件总线/服务定位器/过度 Repository。
 - ADR-007 日志与诊断脱敏、ADR-008 国际化与时区、ADR-009 Windows 优先 + Linux 持续构建、
-  ADR-010 依赖许可治理、ADR-011 发布签名与更新策略已记录在 `docs/adr/`；记录现有基线与待验证边界，
-  不代表签名、平台构建或发布证据已完成。
+  ADR-010 依赖许可治理、ADR-011 发布签名与更新策略、ADR-012 数据网格选用 trina_grid 2.4.0
+  已记录在 `docs/adr/`；记录现有基线与待验证边界，不代表签名、平台构建或发布证据已完成。
 
 框架升级：SemVer；明确公共 API 与内部实现；破坏性变更写迁移说明；数据库迁移可测试；发布前跑示例应用与二开样例兼容测试；业务代码不改框架生成文件；优先通过稳定接口扩展，不要求复制源码。首次发布前建 `CHANGELOG.md`（Keep a Changelog 格式），每次发版记录新增、变更、移除、修复与迁移步骤。
 
