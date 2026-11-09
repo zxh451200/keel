@@ -139,9 +139,15 @@ UI 与 Rust 两端验证，Rust 是业务数据安全边界；SQL 参数化，�
 
 ## 6. 数据网格 POC 与准入门槛
 
-PlutoGrid 是首选候选，不是已验收结论。2026-11-08 生态备注：`pluto_grid` 上游仍在维护，
-但其社区重心已迁移到后继包 `trina_grid`（`pluto_grid_plus` fork 已停维护并指向它）；
-POC 时将 `trina_grid` 纳入对比后按本节准入门槛择一锁定。必测：
+**2026-11-09 已锁定 `trina_grid 2.4.0`（MIT）**：两候选用同一套 POC 用例对比两轮
+（trina 62 通过 / 0 skip，pluto 54 通过 + 2 skip；pluto 的惰性分页销毁缺陷在 trina 已修，
+trina 另有快捷键覆盖与取页失败静默两项已用测试固定的绕法；Fluent 宿主同仪中 pluto 在无
+Material 祖先的页面编辑失败、trina 自补透明 Material）。锁定依据与证据见
+`docs/GRID_POC.md` 2026-11-09 节、`build/reports/grid-poc-trina-20261109.md` 与 ADR-012。
+生产依赖已加入 `trina_grid: 2.4.0`；首个生产页面（往来单位示例）已用其行选择/虚拟滚动/
+快捷键替换手写表格，编辑仍走既有对话框。**锁定不等于平台验收通过**：真实 OS 焦点与窗口、
+进程内存/CPU、DPI/读屏、Linux 冒烟与 1 万/10 万/100 万端到端仍按本节与
+`docs/IMPLEMENTATION_STATUS.md` 的未跑项处理。必测：
 
 | 场景 | 验收要求 |
 |---|---|
@@ -184,7 +190,8 @@ Keel 自身以 MIT 发布（见 §7.5），第三方依赖各按原许可执行�
 2026-11-09：新增隔离对比包 `poc/grid_columns_trina`（`trina_grid: 2.4.0`），同用例实跑
 55 项全过；官方归档独立下载核 SHA-256 与元数据一致，LICENSE 正文 MIT；相对 pluto 锁
 新增 58 个传递包（pdf 3.13.1 / shadcn_ui 0.57.4 树），逐包 LICENSE 扫描全部
-MIT / BSD-3-Clause / Apache-2.0。仍未接入生产应用，根锁文件未动；完整 NOTICE 核对、
+MIT / BSD-3-Clause / Apache-2.0。该 POC 包本身仍未接入生产应用，根锁当时未动（生产锁定见本节末
+2026-11-09 网格锁定段）；完整 NOTICE 核对、
 security-check 与平台验收在正式引入时做。对比结论与 trina 新发现（快捷键覆盖陷阱、
 取页失败静默）见 `docs/GRID_POC.md` 2026-11-09 节。
 
@@ -197,6 +204,15 @@ security-check 与平台验收在正式引入时做。对比结论与 trina 新�
 均读包内 LICENSE 正文；这些包已在根锁中作为生产依赖，根 NOTICE 不变。结果：
 trina 62 通过 / 0 skip，pluto 54 通过 + 2 skip（新增“Fluent 页内无 Material 祖先时编辑”
 探针在 pluto 侧失败、trina 侧通过）。生产依赖、根锁与准入结论均未改变。
+
+2026-11-09 网格锁定：生产 `pubspec.yaml` 加入 `trina_grid: 2.4.0`（MIT，包内正文
+Copyright (c) [2020] [TrinaGrid]；归档 SHA-256 `cda88c3a…f463a83`），根锁由 pub.dev 重解为
+110 项（102 hosted + 7 Flutter SDK + 1 本地 path），全部 URL 为 pub.dev。新增 52 个传递包，
+逐包读 LICENSE 正文：MIT 28、BSD-3-Clause 66、Apache-2.0 8（含 pdf 3.13.1、barcode 2.2.9、
+rxdart 0.28.0、universal_image 1.0.12 等），其余为 SDK/path；无 GPL/AGPL 或未知许可。
+首个生产页面（往来单位）改用网格行选择与虚拟滚动；编辑仍走既有对话框，单元格内联编辑
+与区域粘贴仍只在 POC，后续批次接入。完整 NOTICE 计数与安全扫描随本批更新，发布仍以
+联网 CI 的 audit/deny/OSV 为准。
 
 Flutter/Dart BSD-3-Clause（引擎与包另有清单）；flutter_rust_bridge MIT；flutter_riverpod MIT；pluto_grid MIT；fluent_ui BSD-3-Clause（社区实现，维护集中度需关注，可替换）；intl / flutter_localizations BSD-3-Clause；file_selector BSD-3-Clause；SQLx MIT OR Apache-2.0；Tokio MIT；Serde/serde_json MIT OR Apache-2.0；tracing 系列 MIT；thiserror/anyhow MIT OR Apache-2.0；chrono MIT OR Apache-2.0；uuid Apache-2.0 OR MIT；csv MIT OR Unlicense；zip MIT；regex MIT OR Apache-2.0；dirs MIT OR Apache-2.0。
 `argon2 0.5.3`（登录口令校验）MIT OR Apache-2.0，含 `password-hash`、`blake2`（MIT OR Apache-2.0）、`base64ct`（Apache-2.0 OR MIT）、`rand_core`/`getrandom`（MIT OR Apache-2.0）；均来自 crates.io，正文随包分发。
@@ -608,7 +624,7 @@ Enter/空格激活。按钮只把该事件 ID 写入剪贴板，不包含摘要�
 
 - F02/P01：Dart 本地日期转换与 Rust `AuditQuery`/`ListParams` 可选 UTC 毫秒边界已对齐；`start_at_ms` 包含、`end_at_ms_exclusive` 不包含，两端都有值时拒绝 start >= end。列表/COUNT/导出预检及批次共用参数化 WHERE，SQLite/API/跨批次/快照回归源码已有；FRB/l10n 生成、Rust/Flutter 编译测试与 DST/平台执行仍待完成。
 - F03：现有用户名/角色短表单、单字段错误摘要、草稿与命令待执行验证；类型输入、多字段分区与摘要已在 form_samples 本地样例编写；实际键盘/取消/焦点及保存业务仍待验证或实现。
-- T01：固定列（start/body/end 三段渲染）、列配置持久化（Rust 用户隔离 CAS）与当前页多选已实现；隔离 POC 已实跑范围复制 TSV、编辑/粘贴合同校验、1M 行单页物化与虚拟化、翻页替换（见 `docs/GRID_POC.md`），但生产表仍是整页一次性建行。`pluto_grid`/`trina_grid` 同用例对比已于 2026-11-09 实跑两轮（trina 62 项全过；pluto 54 项 + 2 skip；缺陷 5 已修、新增快捷键覆盖陷阱、取页静默失败与 Fluent 宿主 Material 祖先差异三项，见 GRID_POC.md 该节与 `build/reports/grid-poc-trina-20261109.md`）；证据倾向 trina，候选锁定仍开放。Fluent 宿主已在 widget 级同仪验证（真实按键、对话框覆盖、深浅主题），真实 OS 焦点/窗口、进程内存、Win/Linux 与 DPI 矩阵仍开放，[网格报告模板](GRID_POC_REPORT_TEMPLATE.md) 对应行默认 NOT RUN。
+- T01：固定列（start/body/end 三段渲染）、列配置持久化（Rust 用户隔离 CAS）与当前页多选已实现；隔离 POC 已实跑范围复制 TSV、编辑/粘贴合同校验、1M 行单页物化与虚拟化、翻页替换（见 `docs/GRID_POC.md`）。`pluto_grid`/`trina_grid` 同用例对比已于 2026-11-09 实跑两轮（trina 62 项全过；pluto 54 项 + 2 skip；缺陷 5 已修、快捷键覆盖陷阱、取页静默失败与 Fluent 宿主 Material 祖先差异三项，见 GRID_POC.md 该节与 `build/reports/grid-poc-trina-20261109.md`）；**已锁定 trina_grid 2.4.0**（ADR-012），往来单位示例页已改用网格，审计页仍为自绘冻结列表格，单元格内联编辑/区域粘贴未接生产。Fluent 宿主已在 widget 级同仪验证（真实按键、对话框覆盖、深浅主题），真实 OS 焦点/窗口、进程内存、Win/Linux 与 DPI 矩阵仍开放，[网格报告模板](GRID_POC_REPORT_TEMPLATE.md) 对应行默认 NOT RUN。
 - 活动聚合仅展示现有 busy 类别，待验证；审计本人内存任务列表已有源码、待生成与验证（Registry 最多6项、终态5分钟 TTL）；审计导出已有独立持久历史表、30天/1000条终态清理和启动时 running→interrupted 恢复，不自动重放，也不根据 CSV 文件推断完成。审计事件不是任务恢复记录。
 - I02：配置 v5 已实现独立时区（系统/UTC）与币种（未指定/CNY/USD/EUR/GBP/JPY）设置并接入视图菜单；DST/系统区域平台事件与更多地区仍待实测，数字/复数统一与 RTL 未实现；金额精度/舍入与业务时区语义仍须产品决策，不从语言或区域推断币种。
 - 批量业务导入已有 `app_user` JSONL 一例（整批事务、进度、协作取消、权限与审计）；其他实体仍须先明确格式/编码、大小/字段/记录上限、唯一键/重复策略、整批或部分提交、取消点与审计。打印当前仅覆盖审计当前页纯文本，其他范围/布局须先产品定义。跨配置与 SQLite 事务、归档导入仍未实现。

@@ -7,6 +7,15 @@ All notable changes to Keel are documented here. This project follows
 
 ### Added
 
+- `trina_grid 2.4.0` selected as the production data grid after the same-case
+  POC comparison; the customer list now uses its row selection, virtual
+  scrolling and shortcut handling while editing stays in the existing dialogs.
+- Rust edition 2024 migration with a pinned `rustfmt` style edition for
+  generated FRB code.
+- Automated display-region coverage: system locale follow/explicit override,
+  view-menu persistence, and audit timestamp reformatting by region/time zone.
+- A desktop integration entry for real-window keyboard selection and a
+  five-cycle RSS lifecycle sample.
 - Current-page audit row selection, keyboard navigation, formula-safe TSV copy,
   and aligned horizontal scrolling in the Fluent UI.
 - Shared Fluent visual tokens, current UI extension guidance, and public API

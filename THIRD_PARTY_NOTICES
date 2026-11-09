@@ -30,8 +30,11 @@ LICENSE 正文**。本轮核对日期：2026-11-01，核对对象为 `rust/Cargo
   `Apache-2.0 OR Apache-2.0 WITH LLVM-exception OR MIT` 1（`wasi`）、`0BSD OR Apache-2.0 OR MIT` 1（`adler2`）。
   全部落在 §7.1 白名单内（`whoami`/`r-efi` 为多许可，按其中的 MIT/Apache 分发）；`syn` 存在 2.x / 3.x 双版本，
   属 proc-macro（不随产物分发），`cargo deny check bans` 以警告提示。
-- Dart/Flutter：根 `pubspec.lock` 共 42 个包（35 hosted + 6 Flutter SDK + 1 本地 path）。
-  按 pub 缓存内 LICENSE 正文判定：BSD-3-Clause 28、Apache-2.0 4、MIT 3，其余为 SDK/path 与本地壳。
+- Dart/Flutter：根 `pubspec.lock` 共 110 项（102 hosted + 7 Flutter SDK + 1 本地 path）。
+  按 pub 缓存内 LICENSE 正文判定：BSD-3-Clause 66、MIT 28、Apache-2.0 8，其余为 SDK/path 与本地壳。
+  2026-11-09 引入 `trina_grid 2.4.0`（MIT，正文 Copyright (c) [2020] [TrinaGrid]）及其 52 个传递包
+  （pdf/barcode/rxdart/universal_image 等为 Apache-2.0；shadcn_ui/slang/serial_csv 等为 MIT；
+  flutter_svg/vector_graphics 系与 Flutter 官方包为 BSD-3-Clause），逐包读正文，无 GPL/AGPL/未知许可。
   Flutter 引擎与框架自带的第三方许可全文由构建产物 `data/flutter_assets/NOTICES`
   （Windows 下为 `NOTICES.Z`，gzip，解压约 1.3 MB）随包分发；2026-11-01 已确认
   `flutter test integration_test -d windows` 构建后该文件存在。
