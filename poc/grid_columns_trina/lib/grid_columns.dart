@@ -10,7 +10,7 @@ typedef GridColumnLayout = ({
 /// Matches the Rust layout contract. Rust remains the persistence boundary.
 class GridColumns {
   GridColumns(this.listId, Iterable<GridColumnLayout> source)
-      : columns = List<GridColumnLayout>.unmodifiable(source) {
+    : columns = List<GridColumnLayout>.unmodifiable(source) {
     final expected = switch (listId) {
       // The audit_log database column and public audit contract are both `at`.
       'audit_log' => {'at', 'actor', 'action', 'target', 'result'},

@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
+  cupertino_ui:
+    dependency: transitive
+    description:
+      name: cupertino_ui
+      sha256: "369e39a1c5c030a6212589c3da1809920b1c2cfade7b02aade7695bfa4b88c3a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.1.6"
   fake_async:
     dependency: transitive
     description:
@@ -49,6 +57,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.3"
+  fluent_ui:
+    dependency: "direct dev"
+    description:
+      name: fluent_ui
+      sha256: "4482326e3d4881f59b4a42e9c608b2be3171cd00fa181f51b6b0dd63bd786a0f"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.17.0"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -112,6 +128,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.13.0"
+  material_ui:
+    dependency: transitive
+    description:
+      name: material_ui
+      sha256: a30f5d0625b6b83770f53ca3f7aafd6fd9d147cb3853f54a70668541046fe5d6
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.10.0"
+  math_expressions:
+    dependency: transitive
+    description:
+      name: math_expressions
+      sha256: "22aca3a24e445be5f42ecf186cbded1f9951bf9ec5eb48fcddbd55e102bb11f5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.0"
   meta:
     dependency: transitive
     description:
@@ -128,6 +160,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.9.1"
+  petitparser:
+    dependency: transitive
+    description:
+      name: petitparser
+      sha256: "2f1564aadb14215e478563b5406cb80729d022158c01dc50c96013c2f7eb4790"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.1.0"
   pluto_grid:
     dependency: "direct main"
     description:
@@ -136,6 +176,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "8.1.0"
+  recase:
+    dependency: transitive
+    description:
+      name: recase
+      sha256: e4eb4ec2dcdee52dcf99cb4ceabaffc631d7424ee55e56f280bc039737f89213
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.1.0"
   rxdart:
     dependency: transitive
     description:
@@ -144,6 +192,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
+  scroll_pos:
+    dependency: transitive
+    description:
+      name: scroll_pos
+      sha256: cebf602b2dd939de6832bb902ffefb574608d1b84f420b82b381a4007d3c1e1b
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.0"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -214,5 +270,5 @@ packages:
     source: hosted
     version: "15.4.0"
 sdks:
-  dart: ">=3.11.0-0 <4.0.0"
-  flutter: ">=3.18.0-18.0.pre.54"
+  dart: ">=3.13.0 <4.0.0"
+  flutter: ">=3.47.0"

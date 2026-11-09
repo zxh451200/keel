@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:keel_grid_columns_poc/l10n/poc_localizations.dart';
-import 'package:keel_grid_columns_poc/main.dart';
-import 'package:pluto_grid/pluto_grid.dart';
+import 'package:keel_grid_columns_trina_poc/l10n/poc_localizations.dart';
+import 'package:keel_grid_columns_trina_poc/main.dart';
+import 'package:trina_grid/trina_grid.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting());
 
-  PlutoGrid grid(WidgetTester tester) =>
-      tester.widget<PlutoGrid>(find.byType(PlutoGrid));
+  TrinaGrid grid(WidgetTester tester) =>
+      tester.widget<TrinaGrid>(find.byType(TrinaGrid));
 
-  PlutoGridStateManager manager(WidgetTester tester) => tester
-      .widget<PlutoLazyPagination>(find.byType(PlutoLazyPagination))
+  TrinaGridStateManager manager(WidgetTester tester) => tester
+      .widget<TrinaLazyPagination>(find.byType(TrinaLazyPagination))
       .stateManager;
 
   Future<void> pump(WidgetTester tester) async {
@@ -39,7 +39,7 @@ void main() {
 
     // The body is a ListView.builder: only viewport rows are widgets.
     final rendered = find
-        .byWidgetPredicate((w) => w.runtimeType.toString() == 'PlutoBaseRow')
+        .byWidgetPredicate((w) => w.runtimeType.toString() == 'TrinaBaseRow')
         .evaluate()
         .length;
     expect(rendered, greaterThan(0));
@@ -49,9 +49,9 @@ void main() {
   testWidgets('paging replaces the loaded page', (tester) async {
     await pump(tester);
     await selectDataset(tester, 1000);
-    // PlutoLazyPagination keeps its page in private state; there is no public
+    // TrinaLazyPagination keeps its page in private state; there is no public
     // API to navigate programmatically, so the footer state is driven directly.
-    final footer = tester.state(find.byType(PlutoLazyPagination)) as dynamic;
+    final footer = tester.state(find.byType(TrinaLazyPagination)) as dynamic;
     footer.setPage(2);
     await tester.pumpAndSettle();
     final state = manager(tester);
@@ -60,8 +60,9 @@ void main() {
     expect(state.refRows.last.cells['id']!.value, 'row-400');
   });
 
-  testWidgets('sorting is offered only when the dataset fits one page',
-      (tester) async {
+  testWidgets('sorting is offered only when the dataset fits one page', (
+    tester,
+  ) async {
     await pump(tester);
     expect(grid(tester).columns.every((c) => c.enableSorting), isTrue);
     await selectDataset(tester, 1000);
@@ -70,12 +71,12 @@ void main() {
     expect(grid(tester).columns.every((c) => c.enableSorting), isTrue);
   });
 
-  testWidgets('an in-flight fetch would jumpTo a detached controller',
-      (tester) async {
-    // pluto_grid 8.1.0 PlutoLazyPagination.setPage's `.then` calls
-    // `stateManager.scroll.bodyRowsVertical!.jumpTo(0)` with no dispose guard.
-    // Unmounting mid-fetch makes the framework report that assertion outside
-    // this test body, so this asserts the post-dispose condition it hits.
+  testWidgets('a detached body controller still asserts on jumpTo (control)', (
+    tester,
+  ) async {
+    // pluto_grid 8.1.0 hit this because setPage's `.then` called jumpTo with
+    // no dispose guard. trina_grid 2.4.0 guards with `mounted` + fetch version,
+    // so this only pins the underlying Flutter controller hazard as a control.
     await pump(tester);
     final state = manager(tester);
     final controller = state.scroll.bodyRowsVertical!;
@@ -87,7 +88,7 @@ void main() {
   });
 
   testWidgets(
-    'reproduction: unmounting during a delayed fetch throws in PlutoGrid',
+    'unmounting during a delayed fetch is guarded (pluto defect 5 probe)',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -100,11 +101,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 400));
+      // Unlike pluto_grid 8.1.0 this must complete without a framework error:
+      // trina's setPage checks `thisVersion != _fetchVersion || !mounted`
+      // before touching the scroll controller.
+      expect(tester.takeException(), isNull);
     },
-    // The framework reports the plugin's assertion directly, outside this test
-    // body, so the reproduction can only run as a failing test. Removing `skip`
-    // must show "ScrollController not attached to any scroll views"; the stack
-    // is recorded in docs/GRID_POC.md.
-    skip: true,
   );
 }

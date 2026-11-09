@@ -1,14 +1,14 @@
-import 'package:pluto_grid/pluto_grid.dart';
+import 'package:trina_grid/trina_grid.dart';
 
 import 'grid_columns.dart';
 
 /// The factory returns fresh, unattached columns. Titles, types and editing
 /// policy belong to the caller. No live grid state is mutated here.
-List<PlutoColumn> createPlutoColumns(
+List<TrinaColumn> createTrinaColumns(
   GridColumns layout,
-  PlutoColumn Function(String id) createColumn,
+  TrinaColumn Function(String id) createColumn,
 ) {
-  final result = <PlutoColumn>[];
+  final result = <TrinaColumn>[];
   for (final preference in layout.columns) {
     final column = createColumn(preference.id);
     if (column.field != preference.id) {
@@ -26,9 +26,9 @@ List<PlutoColumn> createPlutoColumns(
       ..width = preference.width.toDouble()
       ..hide = !preference.visible
       ..frozen = switch (preference.frozen) {
-        GridFrozen.start => PlutoColumnFrozen.start,
-        GridFrozen.none => PlutoColumnFrozen.none,
-        GridFrozen.end => PlutoColumnFrozen.end,
+        GridFrozen.start => TrinaColumnFrozen.start,
+        GridFrozen.none => TrinaColumnFrozen.none,
+        GridFrozen.end => TrinaColumnFrozen.end,
       };
   }
   return result;

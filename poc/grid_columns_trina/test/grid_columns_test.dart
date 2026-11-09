@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:pluto_grid/pluto_grid.dart';
-import 'package:keel_grid_columns_poc/grid_columns.dart';
-import 'package:keel_grid_columns_poc/pluto_columns.dart';
+import 'package:trina_grid/trina_grid.dart';
+import 'package:keel_grid_columns_trina_poc/grid_columns.dart';
+import 'package:keel_grid_columns_trina_poc/trina_columns.dart';
 
 const fixtureIds = ['id', 'text', 'quantity', 'date', 'kind'];
 
@@ -10,18 +10,18 @@ GridColumnLayout preference(
   int width = 160,
   bool visible = true,
   GridFrozen frozen = GridFrozen.none,
-}) =>
-    (id: id, width: width, visible: visible, frozen: frozen);
+}) => (id: id, width: width, visible: visible, frozen: frozen);
 
-List<GridColumnLayout> defaults() =>
-    [for (final id in fixtureIds) preference(id)];
+List<GridColumnLayout> defaults() => [
+  for (final id in fixtureIds) preference(id),
+];
 
-PlutoColumn column(String id) => PlutoColumn(
-      title: id,
-      field: id,
-      type: PlutoColumnType.text(),
-      readOnly: true,
-    );
+TrinaColumn column(String id) => TrinaColumn(
+  title: id,
+  field: id,
+  type: TrinaColumnType.text(),
+  readOnly: true,
+);
 
 void main() {
   test('maps order, widths, visibility and frozen groups', () {
@@ -32,15 +32,20 @@ void main() {
       preference('quantity'),
       preference('kind', width: 800, frozen: GridFrozen.end),
     ]);
-    final columns = createPlutoColumns(layout, column);
-    expect(columns.map((c) => c.field),
-        ['id', 'text', 'date', 'quantity', 'kind']);
+    final columns = createTrinaColumns(layout, column);
+    expect(columns.map((c) => c.field), [
+      'id',
+      'text',
+      'date',
+      'quantity',
+      'kind',
+    ]);
     expect(columns.map((c) => c.width), [80.0, 160.0, 200.0, 160.0, 800.0]);
     expect(columns[1].hide, isTrue);
     expect(columns[2].hide, isFalse);
-    expect(columns.first.frozen, PlutoColumnFrozen.start);
-    expect(columns[1].frozen, PlutoColumnFrozen.none);
-    expect(columns.last.frozen, PlutoColumnFrozen.end);
+    expect(columns.first.frozen, TrinaColumnFrozen.start);
+    expect(columns[1].frozen, TrinaColumnFrozen.none);
+    expect(columns.last.frozen, TrinaColumnFrozen.end);
     expect(columns.every((c) => c.readOnly), isTrue);
   });
 
@@ -52,7 +57,7 @@ void main() {
     final layout = GridColumns('audit_log', input);
     input.clear();
     expect(layout.columns, hasLength(5));
-    expect(createPlutoColumns(layout, column), hasLength(5));
+    expect(createTrinaColumns(layout, column), hasLength(5));
     expect(() => layout.columns.clear(), throwsUnsupportedError);
   });
 
@@ -60,7 +65,9 @@ void main() {
     test('rejects width $width', () {
       final input = defaults()..[0] = preference('id', width: width);
       expect(
-          () => GridColumns('grid_poc_fixture', input), throwsFormatException);
+        () => GridColumns('grid_poc_fixture', input),
+        throwsFormatException,
+      );
     });
   }
 
@@ -101,8 +108,10 @@ void main() {
   };
   for (final entry in invalidLayouts.entries) {
     test('rejects ${entry.key}', () {
-      expect(() => GridColumns('grid_poc_fixture', entry.value),
-          throwsFormatException);
+      expect(
+        () => GridColumns('grid_poc_fixture', entry.value),
+        throwsFormatException,
+      );
     });
   }
 
@@ -111,20 +120,21 @@ void main() {
   });
 
   test('factory mismatch leaves previously created columns unchanged', () {
-    final created = <PlutoColumn>[];
+    final created = <TrinaColumn>[];
     expect(
-        () => createPlutoColumns(
-              GridColumns('grid_poc_fixture', [
-                preference('id', width: 80),
-                ...defaults().sublist(1),
-              ]),
-              (id) {
-                final value = column(id == 'kind' ? 'wrong' : id)..width = 333;
-                created.add(value);
-                return value;
-              },
-            ),
-        throwsArgumentError);
+      () => createTrinaColumns(
+        GridColumns('grid_poc_fixture', [
+          preference('id', width: 80),
+          ...defaults().sublist(1),
+        ]),
+        (id) {
+          final value = column(id == 'kind' ? 'wrong' : id)..width = 333;
+          created.add(value);
+          return value;
+        },
+      ),
+      throwsArgumentError,
+    );
     expect(created.every((c) => c.width == 333), isTrue);
   });
 }

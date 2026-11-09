@@ -1,7 +1,7 @@
 /// Mirrors `rust/src/services/grid_fixture.rs::validate` for the isolated POC.
 ///
 /// The POC must not import the production app, so the contract is duplicated
-/// here on purpose. PlutoGrid's own number/date types silently coerce invalid
+/// here on purpose. TrinaGrid's own number/date types silently coerce invalid
 /// input (e.g. "abc" becomes 0), which would hide paste corruption; every edit
 /// and paste therefore goes through this layer instead.
 library;
@@ -32,45 +32,54 @@ class FixtureRow {
   final String kind;
 
   String cell(FixtureField field) => switch (field) {
-        FixtureField.id => id,
-        FixtureField.text => text,
-        FixtureField.quantity => '$quantity',
-        FixtureField.date => date,
-        FixtureField.kind => kind,
-      };
+    FixtureField.id => id,
+    FixtureField.text => text,
+    FixtureField.quantity => '$quantity',
+    FixtureField.date => date,
+    FixtureField.kind => kind,
+  };
 
   FixtureRow withCell(FixtureField field, Object value) => switch (field) {
-        FixtureField.id => FixtureRow(
-            id: value as String,
-            text: text,
-            quantity: quantity,
-            date: date,
-            kind: kind),
-        FixtureField.text => FixtureRow(
-            id: id,
-            text: value as String,
-            quantity: quantity,
-            date: date,
-            kind: kind),
-        FixtureField.quantity => FixtureRow(
-            id: id, text: text, quantity: value as int, date: date, kind: kind),
-        FixtureField.date => FixtureRow(
-            id: id,
-            text: text,
-            quantity: quantity,
-            date: value as String,
-            kind: kind),
-        FixtureField.kind => FixtureRow(
-            id: id,
-            text: text,
-            quantity: quantity,
-            date: date,
-            kind: value as String),
-      };
+    FixtureField.id => FixtureRow(
+      id: value as String,
+      text: text,
+      quantity: quantity,
+      date: date,
+      kind: kind,
+    ),
+    FixtureField.text => FixtureRow(
+      id: id,
+      text: value as String,
+      quantity: quantity,
+      date: date,
+      kind: kind,
+    ),
+    FixtureField.quantity => FixtureRow(
+      id: id,
+      text: text,
+      quantity: value as int,
+      date: date,
+      kind: kind,
+    ),
+    FixtureField.date => FixtureRow(
+      id: id,
+      text: text,
+      quantity: quantity,
+      date: value as String,
+      kind: kind,
+    ),
+    FixtureField.kind => FixtureRow(
+      id: id,
+      text: text,
+      quantity: quantity,
+      date: date,
+      kind: value as String,
+    ),
+  };
 
   Map<String, Object> toCells() => {
-        for (final field in FixtureField.values) field.name: cell(field),
-      };
+    for (final field in FixtureField.values) field.name: cell(field),
+  };
 }
 
 /// Parses one pasted/typed cell. Returns null when the raw text cannot be a
@@ -118,12 +127,14 @@ String? validateFixtureRow(FixtureRow row) {
 
 bool _validId(String value) {
   if (value.isEmpty || value.length > idMaxLength) return false;
-  return value.codeUnits.every((c) =>
-      (c >= 48 && c <= 57) ||
-      (c >= 65 && c <= 90) ||
-      (c >= 97 && c <= 122) ||
-      c == 95 ||
-      c == 45);
+  return value.codeUnits.every(
+    (c) =>
+        (c >= 48 && c <= 57) ||
+        (c >= 65 && c <= 90) ||
+        (c >= 97 && c <= 122) ||
+        c == 95 ||
+        c == 45,
+  );
 }
 
 bool _validText(String value) {

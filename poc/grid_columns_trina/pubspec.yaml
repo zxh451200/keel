@@ -16,6 +16,8 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Test-only host: the production shell is FluentApp, not MaterialApp.
+  fluent_ui: 4.17.0
 
 flutter:
   generate: true

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:keel_grid_columns_poc/fixture_contract.dart';
+import 'package:keel_grid_columns_trina_poc/fixture_contract.dart';
 
 FixtureRow row({
   String id = 'row-1',
@@ -35,18 +35,20 @@ void main() {
     expect(parseFixtureCell(FixtureField.id, 'row/2'), isNull);
   });
 
-  test('text contract trims nothing but rejects blank, long and control runs',
-      () {
-    expect(validateFixtureRow(row(text: '   ')), 'invalid-text');
-    expect(validateFixtureRow(row(text: 'a' * 80)), isNull);
-    expect(validateFixtureRow(row(text: 'a' * 81)), 'invalid-text');
-    expect(validateFixtureRow(row(text: 'tab\there')), 'invalid-text');
-    expect(validateFixtureRow(row(text: 'del\u007f')), 'invalid-text');
-    expect(validateFixtureRow(row(text: 'c1\u0085')), 'invalid-text');
-    // 80 code points, not 80 UTF-16 units.
-    expect(validateFixtureRow(row(text: '汉' * 80)), isNull);
-    expect(parseFixtureCell(FixtureField.text, 'ok\n'), isNull);
-  });
+  test(
+    'text contract trims nothing but rejects blank, long and control runs',
+    () {
+      expect(validateFixtureRow(row(text: '   ')), 'invalid-text');
+      expect(validateFixtureRow(row(text: 'a' * 80)), isNull);
+      expect(validateFixtureRow(row(text: 'a' * 81)), 'invalid-text');
+      expect(validateFixtureRow(row(text: 'tab\there')), 'invalid-text');
+      expect(validateFixtureRow(row(text: 'del\u007f')), 'invalid-text');
+      expect(validateFixtureRow(row(text: 'c1\u0085')), 'invalid-text');
+      // 80 code points, not 80 UTF-16 units.
+      expect(validateFixtureRow(row(text: '汉' * 80)), isNull);
+      expect(parseFixtureCell(FixtureField.text, 'ok\n'), isNull);
+    },
+  );
 
   test('quantity contract never coerces a lossy value to a number', () {
     expect(parseFixtureCell(FixtureField.quantity, '42'), 42);
@@ -55,7 +57,7 @@ void main() {
     expect(parseFixtureCell(FixtureField.quantity, '-2147483648'), -2147483648);
     expect(parseFixtureCell(FixtureField.quantity, '2147483648'), isNull);
     expect(parseFixtureCell(FixtureField.quantity, '-2147483649'), isNull);
-    // The cases PlutoGrid's number type would have silently turned into 0.
+    // The cases TrinaGrid's number type would have silently turned into 0.
     expect(parseFixtureCell(FixtureField.quantity, 'abc'), isNull);
     expect(parseFixtureCell(FixtureField.quantity, '1.5'), isNull);
     expect(parseFixtureCell(FixtureField.quantity, '1,000'), isNull);

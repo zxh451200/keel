@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:keel_grid_columns_poc/fixture_source.dart';
+import 'package:keel_grid_columns_trina_poc/fixture_source.dart';
 
 void main() {
   test('total page derives from the configured page size', () {
@@ -43,8 +43,10 @@ void main() {
 
   test('rows follow the fixture contract', () async {
     final page = await FixtureSource(totalRows: 4).fetch(1);
-    expect([for (final row in page.rows) row.kind],
-        ['standard', 'priority', 'standard', 'priority']);
+    expect(
+      [for (final row in page.rows) row.kind],
+      ['standard', 'priority', 'standard', 'priority'],
+    );
     expect(page.rows.every((row) => row.date == '2026-11-06'), isTrue);
     expect([for (final row in page.rows) row.quantity], [1, 2, 3, 4]);
   });

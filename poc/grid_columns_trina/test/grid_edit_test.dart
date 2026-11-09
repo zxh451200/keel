@@ -2,58 +2,58 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:keel_grid_columns_poc/main.dart';
-import 'package:pluto_grid/pluto_grid.dart';
+import 'package:keel_grid_columns_trina_poc/main.dart';
+import 'package:trina_grid/trina_grid.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting());
 
-  PlutoGrid grid(WidgetTester tester) =>
-      tester.widget<PlutoGrid>(find.byType(PlutoGrid));
+  TrinaGrid grid(WidgetTester tester) =>
+      tester.widget<TrinaGrid>(find.byType(TrinaGrid));
 
-  PlutoGridStateManager manager(WidgetTester tester) => tester
-      .widget<PlutoLazyPagination>(find.byType(PlutoLazyPagination))
+  TrinaGridStateManager manager(WidgetTester tester) => tester
+      .widget<TrinaLazyPagination>(find.byType(TrinaLazyPagination))
       .stateManager;
 
   String status(WidgetTester tester) =>
       tester.widget<Text>(find.byKey(const ValueKey('editStatus'))).data!;
 
-  PlutoGridShortcutAction actionFor(
-          WidgetTester tester, LogicalKeyboardKey key) =>
-      grid(tester)
-          .configuration
-          .shortcut
-          .actions
-          .entries
-          .firstWhere((entry) =>
-              entry.key is LogicalKeySet &&
-              (entry.key as LogicalKeySet).keys.length == 2 &&
-              (entry.key as LogicalKeySet)
-                  .keys
-                  .contains(LogicalKeyboardKey.control) &&
-              (entry.key as LogicalKeySet).keys.contains(key))
-          .value;
+  TrinaGridShortcutAction actionFor(
+    WidgetTester tester,
+    LogicalKeyboardKey key,
+  ) => grid(tester).configuration.shortcut.actions.entries
+      .firstWhere(
+        (entry) =>
+            entry.key is SingleActivator &&
+            (entry.key as SingleActivator).trigger == key &&
+            (entry.key as SingleActivator).control,
+      )
+      .value;
 
-  Future<void> pump(WidgetTester tester,
-      {Locale locale = const Locale('en')}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    Locale locale = const Locale('en'),
+  }) async {
     await tester.binding.setSurfaceSize(const Size(1200, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(GridPocApp(locale: locale));
     await tester.pumpAndSettle();
   }
 
-  Future<void> pumpEditable(WidgetTester tester,
-      {Locale locale = const Locale('en')}) async {
+  Future<void> pumpEditable(
+    WidgetTester tester, {
+    Locale locale = const Locale('en'),
+  }) async {
     await pump(tester, locale: locale);
-    tester
-        .widget<Switch>(find.byKey(const ValueKey('editable')))
-        .onChanged!(true);
+    tester.widget<Switch>(find.byKey(const ValueKey('editable'))).onChanged!(
+      true,
+    );
     await tester.pumpAndSettle();
   }
 
   testWidgets('read-only is the default and rejects edits', (tester) async {
     await pump(tester);
-    expect(grid(tester).mode, PlutoGridMode.readOnly);
+    expect(grid(tester).mode, TrinaGridMode.readOnly);
     expect(grid(tester).columns.every((c) => c.readOnly), isTrue);
     final state = manager(tester);
     final cell = state.refRows.first.cells['text']!;
@@ -63,18 +63,22 @@ void main() {
     expect(status(tester), 'Read-only: cell editing is disabled.');
   });
 
-  testWidgets('editable toggle switches mode and column policy',
-      (tester) async {
+  testWidgets('editable toggle switches mode and column policy', (
+    tester,
+  ) async {
     await pumpEditable(tester);
-    expect(grid(tester).mode, PlutoGridMode.normal);
+    expect(grid(tester).mode, TrinaGridMode.normal);
     expect(grid(tester).columns.every((c) => !c.readOnly), isTrue);
     expect(find.text('Grid POC · Editable synthetic data'), findsOneWidget);
-    expect(status(tester),
-        'Edit a cell or paste TSV. Invalid values are reverted.');
+    expect(
+      status(tester),
+      'Edit a cell or paste TSV. Invalid values are reverted.',
+    );
   });
 
-  testWidgets('a valid edit is accepted and written back canonically',
-      (tester) async {
+  testWidgets('a valid edit is accepted and written back canonically', (
+    tester,
+  ) async {
     await pumpEditable(tester);
     final state = manager(tester);
     final cell = state.refRows.first.cells['quantity']!;
@@ -85,8 +89,9 @@ void main() {
     expect(status(tester), 'Accepted cell changes: 1');
   });
 
-  testWidgets('an unparsable quantity is reverted instead of becoming 0',
-      (tester) async {
+  testWidgets('an unparsable quantity is reverted instead of becoming 0', (
+    tester,
+  ) async {
     await pumpEditable(tester);
     final state = manager(tester);
     final cell = state.refRows.first.cells['quantity']!;
@@ -120,8 +125,9 @@ void main() {
     expect(status(tester), contains('数量'));
   });
 
-  testWidgets('paste keeps valid cells and reverts invalid ones',
-      (tester) async {
+  testWidgets('paste keeps valid cells and reverts invalid ones', (
+    tester,
+  ) async {
     await pumpEditable(tester);
     final state = manager(tester);
     state.setCurrentCell(state.refRows.first.cells['text']!, 0);
@@ -139,20 +145,66 @@ void main() {
     final state = manager(tester);
     state.setCurrentCell(state.refRows.first.cells['id']!, 0);
     state.setCurrentSelectingPosition(
-        cellPosition: const PlutoGridCellPosition(rowIdx: 0, columnIdx: 1));
+      cellPosition: const TrinaGridCellPosition(rowIdx: 0, columnIdx: 1),
+    );
     expect(state.currentSelectingText, 'row-1\trecord-1');
   });
 
-  testWidgets('Ctrl+C keeps the default action and Ctrl+V is replaced',
-      (tester) async {
+  testWidgets('Ctrl+C keeps the default action and Ctrl+V is replaced', (
+    tester,
+  ) async {
     await pump(tester);
-    expect(actionFor(tester, LogicalKeyboardKey.keyC),
-        isA<PlutoGridActionCopyValues>());
+    expect(
+      actionFor(tester, LogicalKeyboardKey.keyC),
+      isA<TrinaGridActionCopyValues>(),
+    );
     expect(actionFor(tester, LogicalKeyboardKey.keyV), isA<SafePasteAction>());
   });
 
-  testWidgets('safe paste handles empty, oversized and normal clipboards',
-      (tester) async {
+  testWidgets('Ctrl+V key dispatch runs SafePasteAction, not the built-in', (
+    tester,
+  ) async {
+    await pumpEditable(tester);
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+      if (call.method == 'Clipboard.getData') {
+        return <String, dynamic>{'text': 'x' * (pasteMaxBytes + 1)};
+      }
+      return null;
+    });
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+    final state = manager(tester);
+    state.setCurrentCell(state.refRows.first.cells['text']!, 0);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
+    final focusNode = FocusNode();
+    addTearDown(focusNode.dispose);
+    // handle() executes the first matching entry in insertion order; if the
+    // override lost to the built-in SingleActivator, the oversized payload
+    // would be pasted and rejected per-cell instead of whole-payload refused.
+    final handled = grid(tester).configuration.shortcut.handle(
+      keyEvent: TrinaKeyManagerEvent(
+        focusNode: focusNode,
+        event: const KeyDownEvent(
+          physicalKey: PhysicalKeyboardKey.keyV,
+          logicalKey: LogicalKeyboardKey.keyV,
+          character: 'v',
+          timeStamp: Duration.zero,
+        ),
+      ),
+      stateManager: state,
+      state: HardwareKeyboard.instance,
+    );
+    await tester.pumpAndSettle();
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
+    expect(handled, isTrue);
+    expect(status(tester), 'Paste ignored: the clipboard exceeds 1 MiB.');
+  });
+
+  testWidgets('safe paste handles empty, oversized and normal clipboards', (
+    tester,
+  ) async {
     await pumpEditable(tester);
     final messenger = tester.binding.defaultBinaryMessenger;
     String? clipboard;
@@ -162,14 +214,15 @@ void main() {
       }
       return null;
     });
-    addTearDown(() =>
-        messenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    addTearDown(
+      () => messenger.setMockMethodCallHandler(SystemChannels.platform, null),
+    );
 
     // The grid's own Ctrl+V action, so the page status line is exercised too.
     final action = actionFor(tester, LogicalKeyboardKey.keyV);
     final focusNode = FocusNode();
     addTearDown(focusNode.dispose);
-    final keyEvent = PlutoKeyManagerEvent(
+    final keyEvent = TrinaKeyManagerEvent(
       focusNode: focusNode,
       event: const KeyDownEvent(
         physicalKey: PhysicalKeyboardKey.keyV,

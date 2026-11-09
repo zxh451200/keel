@@ -157,9 +157,67 @@ POC 时须把 `trina_grid` 与 `pluto_grid` 一并纳入对比（各自按本文
 
 本次不把 `trina_grid` 加进 POC 锁文件：它会额外引入 `pdf`（Apache-2.0）与 `shadcn_ui`
 （MIT，但需要核对主题与 SDK 约束），在其本身完成同一矩阵之前，没有证据表明它更合适。
-**结论保持开放**：v1 暂以 `pluto_grid` 为候选（已有可执行矩阵与上述缺陷清单），
-`trina_grid` 的矩阵状态为 NOT RUN；正式锁定前须用同一 POC 用例对比两者，
+当时的结论保持开放：v1 暂以 `pluto_grid` 为候选，`trina_grid` 矩阵状态 NOT RUN；
 不得仅凭发布节奏或用“社区重心迁移”作为唯一理由更换。
+**2026-11-09 更新**：同一 POC 用例对比已实际执行两轮（含 Fluent 宿主同仪用例），见下节；
+候选锁定仍开放（真实 OS 焦点/窗口、进程内存与平台矩阵对两者都未跑）。
+
+## 2026-11-09 trina_grid 同用例对比（实际执行）
+
+隔离包 `poc/grid_columns_trina`：`poc/grid_columns` 的页面、fixture 契约、列适配层与
+全部用例 1:1 移植（Pluto→Trina 改名），另加 5 项缺陷探针与 1 项真实按键分发用例。
+第二轮两包各加同一份 7 项 Fluent 宿主用例（FluentApp + fluent_ui 4.17.0，仅 dev 依赖）。
+不接生产依赖，根锁文件未动。报告：`build/reports/grid-poc-trina-20261109.md`。
+
+门禁实跑（本机 Flutter 3.47.8 / Dart 3.13.7）：`flutter pub get`（trina 85→91 项、pluto 28→35 项，
+锁文件 url 全为 pub.dev；本机 `/c/tools/bin/flutter` 包装脚本硬编码清华镜像，须绕过包装直接调
+flutter_tools 并钉 `PUB_HOSTED_URL=https://pub.dev`）、`flutter gen-l10n`、
+`dart format --output=none --set-exit-if-changed .` 0 差异、两包 `flutter analyze` 0 项、
+`flutter test` **trina 62 通过 / 0 skip；pluto 54 通过 + 2 skip**（pluto 的缺陷 5 复现与
+本轮缺陷 8 探针均带理由 skip），含第二轮 7 项 Fluent 宿主用例（trina 7/7，pluto 6/7 + 1 skip）。
+变异负控制：撤掉快捷键覆盖修复后 3 项转红（含真实分发用例），还原后全量复绿。
+
+供应链：官方归档独立下载计算 SHA-256
+`cda88c3ad69748f54cf2bedb7c8e9af4a6a2e128dd994dbfb8e604d92f463a83`，与 pub.dev 元数据一致；
+包内 LICENSE 正文 MIT（Copyright (c) [2020] [TrinaGrid]）。相对 pluto 锁**新增 58 个传递包**
+（pdf 3.13.1、shadcn_ui 0.57.4 及其树：flutter_svg、flutter_animate、slang、boxy、
+extended_image、universal_image、jni/objective_c、lucide_icons_flutter、serial_csv、
+two_dimensional_scrollables 等），逐包读 LICENSE，全部 MIT / BSD-3-Clause / Apache-2.0；
+完整 NOTICE 与 security-check 留到正式引入生产依赖时。
+
+五缺陷对照（探针 + 包内源码双证）：
+
+| # | pluto_grid 8.1.0 | trina_grid 2.4.0 |
+|---|---|---|
+| 1 rows 必须可变 | 有 | **仍在**（clearFromOriginal 仍 length=0；Response 构造器对含 frozen 行的列表原地改） |
+| 2 数字列静默纠正 | 有 | **仍在**（先 applyFormat 纠正再 validate，校验器只能看到纠正后的值）；新增 column.validator/onValidationFailed 钩子对文本列可用 |
+| 3 Dart/Rust 解析差异 | 有 | 同（语言层面） |
+| 4 内置粘贴不安全 | 空剪贴板断言、无上限 | **部分修**：null 数据提前返回；`value.text!` 仍强解包、仍无上限，SafePaste 仍必需 |
+| 5 惰性分页销毁守卫 | 无（断言崩溃） | **已修**（mounted + fetch version 双守卫，复现用例去 skip 通过） |
+
+trina 新发现（均已有测试固定）：
+
+6. **快捷键覆盖陷阱**：默认表用 SingleActivator（仅身份相等），handle() 按插入序取首个
+   匹配；pluto 式 LogicalKeySet 覆盖和同形键替换都被内置粘贴静默压住。生产接线必须
+   按动作类型剔除内置粘贴项再注册 SafePaste（control 与 meta 两变体）。
+7. **取页失败静默**：setPage 的 catchError 只 debugPrint 并关 loading，无错误事件/重试面；
+   生产接线必须自行处理 fetch 失败，不能依赖组件报错。
+8. **宿主差异（pluto 侧缺陷）**：Fluent 页内没有 Material 祖先时，pluto_grid 8.1.0 的单元格
+   进入编辑抛 `No Material widget found`；trina 2.4.0 在网格外层按需补透明 Material（其
+   #423 修复），同一用例通过。选 pluto 则每个网格页必须自包 Material。两候选共同前提：
+   FluentApp 默认只提供独立包 `material_ui` 的本地化代理，宿主必须另注入
+   `flutter_localizations` 的 GlobalMaterialLocalizations（生产应用已如此）。
+
+Fluent 宿主同仪结果（第二轮，widget 级）：渲染/懒取页、深浅主题、真实 ArrowDown、
+真实 Ctrl+C、真实 Ctrl+V 超限拒绝、Fluent ContentDialog 覆盖后按键路由——两候选全 PASS；
+第 8 项 pluto FAIL / trina PASS。日志：`build/reports/{trina,pluto}_fluent_host.log`
+与 `*_fluent_suite.log`。
+
+**当前结论**：对比门禁（同一用例跑两者）已完成。证据倾向 trina_grid——缺陷 5 已修、
+原生校验钩子可用、Fluent 宿主无需 Material 壳；缺陷 1/2/4 两候选都需要同样的绕行代码，
+trina 的缺陷 6/7 已有固定解法。代价是 +58 传递依赖（宿主测试另加 6 包，许可均宽松）。
+**锁定仍开放**：真实 OS 焦点与窗口、进程内存、DPI/读屏、Win/Linux 平台矩阵对任一候选
+都是同一套未跑项，按需求文档 §6 放行条件补齐后方可锁定；本轮不改变生产依赖。
 
 ## 第二批独立编辑与导入 fixture 契约
 

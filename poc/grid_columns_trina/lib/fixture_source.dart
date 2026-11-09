@@ -21,8 +21,8 @@ class FixtureSource {
     required this.totalRows,
     this.pageSize = 200,
     this.fetchDelay = Duration.zero,
-  })  : assert(totalRows > 0),
-        assert(pageSize > 0 && pageSize <= 200);
+  }) : assert(totalRows > 0),
+       assert(pageSize > 0 && pageSize <= 200);
 
   final int totalRows;
   final int pageSize;
@@ -44,9 +44,7 @@ class FixtureSource {
     }
     final start = (page - 1) * pageSize;
     final end = start + pageSize > totalRows ? totalRows : start + pageSize;
-    final rows = [
-      for (var index = start; index < end; index++) rowAt(index),
-    ];
+    final rows = [for (var index = start; index < end; index++) rowAt(index)];
     materializedRows += rows.length;
     return FixturePage(
       page: page,
