@@ -78,13 +78,11 @@ jobs:
           fi
           generated_status="$(git status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock)"
           if [[ -n "$generated_status" ]]; then
-            echo "::error::生成物或锁文件有未提交差异（含新增文件）。"
-            printf '%s\n' "$generated_status" | sed 's/^/::error::/'
-            # diff 干净但 status 报 M：行尾/转换差异的判别输出
-            echo "::error::autocrlf=false status:"
-            git -c core.autocrlf=false status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock | sed 's/^/::error::/'
-            echo "::error::first diff lines:"
-            git diff | head -n 20 | sed 's/^/::error::/'
+            diag="$(printf '%s' "$generated_status" | head -n 8)
+            autocrlf=false: $(git -c core.autocrlf=false status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock || true)
+            diff-head: $(git diff -- lib/src/rust rust/src/frb_generated.rs | head -n 15 || true)
+            bytes: $(head -c 80 lib/src/rust/api/app.dart | od -c | head -n 4 || true)"
+            echo "::error::生成物或锁文件有未提交差异（含新增文件）。$(printf '%s' "$diag" | sed ':a;N;$!ba;s/\n/%0A/g')"
             exit 1
           fi
 
@@ -121,7 +119,7 @@ jobs:
             tail -n 5 "$RUNNER_TEMP/ci-analyze.log" | sed 's/^/::error::/'
             exit 1
           fi
-          if ! flutter test --no-pub --reporter=github > "$RUNNER_TEMP/ci-flutter-test.log" 2>&1; then
+          if ! flutter test --no-pub > "$RUNNER_TEMP/ci-flutter-test.log" 2>&1; then
             echo "::error::flutter test failed:"
             grep -E "^\[E\]|Some tests failed|Expected|Actual" "$RUNNER_TEMP/ci-flutter-test.log" | head -n 25 | sed 's/^/::error::/'
             exit 1
@@ -261,8 +259,17 @@ jobs:
             tail -n 20 "$RUNNER_TEMP/ci-dart-format.log" | sed 's/^/::error::/'
             exit 1
           fi
-          flutter analyze --no-pub --reporter=github
-          flutter test --no-pub --reporter=github
+          if ! flutter analyze --no-pub > "$RUNNER_TEMP/ci-analyze.log" 2>&1; then
+            echo "::error::flutter analyze found issues:"
+            grep -E "error|warning|info" "$RUNNER_TEMP/ci-analyze.log" | head -n 25 | sed 's/^/::error::/'
+            tail -n 5 "$RUNNER_TEMP/ci-analyze.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          if ! flutter test --no-pub > "$RUNNER_TEMP/ci-flutter-test.log" 2>&1; then
+            echo "::error::flutter test failed:"
+            grep -E "^\[E\]|Some tests failed|Expected|Actual" "$RUNNER_TEMP/ci-flutter-test.log" | head -n 25 | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Flutter Linux Release 构建（含 Rust 动态库）
         run: flutter build linux --release --no-pub
