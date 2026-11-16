@@ -10,6 +10,7 @@ import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/src/rust/api/diagnostics.dart';
 import 'package:keel/ui/pages/diagnostics/diagnostic_history_dialog.dart';
 import 'package:keel/ui/pages/diagnostics/external_diagnostic_dialog.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/ui/widgets/ui_layout.dart';
 
 /// 诊断中心：最近错误、警告和诊断事件；内容在 Rust 侧已脱敏。
@@ -102,11 +103,12 @@ class _DiagnosticsPageState extends ConsumerState<DiagnosticsPage> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     final filter = ref.watch(diagnosticsFilterProvider);
     final events = ref.watch(diagnosticsEventsProvider);
     final user = ref.watch(currentUserProvider);
     final formatInstant = ref.watch(regionalInstantFormatterProvider);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = tokens.secondaryText;
     final canExport =
         hasPermission(user.value, 'diagnostics.export') &&
         !ref.watch(diagnosticExportOpenProvider) &&
@@ -128,6 +130,10 @@ class _DiagnosticsPageState extends ConsumerState<DiagnosticsPage> {
               children: [
                 UiPageHeader(title: t.navDiagnostics, subtitle: t.diagPageHint),
                 const SizedBox(height: 14),
+                if (ref.watch(diagnosticPackBusyProvider)) ...[
+                  UiBusyStrip(message: t.diagPackWorking),
+                  const SizedBox(height: 12),
+                ],
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -244,7 +250,7 @@ class _DiagnosticsPageState extends ConsumerState<DiagnosticsPage> {
                     child: Text(
                       t.diagSearchIdInvalid,
                       style: theme.typography.caption?.copyWith(
-                        color: const Color(0xFFC42B1C),
+                        color: tokens.colors.danger,
                       ),
                     ),
                   ),
@@ -287,16 +293,23 @@ class _DiagnosticsPageState extends ConsumerState<DiagnosticsPage> {
                                       filter.minLevel != 'info'
                                   ? t.diagNoMatches
                                   : t.diagEmpty,
+                              // 有筛选条件却查不到时，给一条直接的退路。
+                              action:
+                                  _interactive &&
+                                      (filter.correlationId.isNotEmpty ||
+                                          filter.minLevel != 'info')
+                                  ? Button(
+                                      onPressed: _reset,
+                                      child: Text(t.actionReset),
+                                    )
+                                  : null,
                             )
                           : ListView.separated(
                               key: ObjectKey(list),
                               itemCount: list.length,
                               separatorBuilder: (_, _) => Container(
                                 height: 1,
-                                color:
-                                    (theme.typography.body?.color ??
-                                            Colors.black)
-                                        .withValues(alpha: 0.07),
+                                color: tokens.subtleBorder,
                               ),
                               itemBuilder: (context, i) => _EventRow(
                                 event: list[i],
@@ -363,9 +376,13 @@ class _EventRowState extends State<_EventRow> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     final event = widget.event;
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.6);
+    final levelColor = switch (event.level) {
+      'error' => tokens.colors.danger,
+      'warn' => tokens.colors.warning,
+      _ => tokens.emptyText,
+    };
     final head = [
       widget.formatInstant(event.at),
       _levelLabel(t, event.level),
@@ -377,20 +394,30 @@ class _EventRowState extends State<_EventRow> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 等级用圆点标出：一屏几十条日志时，靠文字找 error 太慢。
+          Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(top: 7),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: levelColor,
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  event.summary,
-                  style: theme.typography.body?.copyWith(fontSize: 13),
-                ),
+                Text(event.summary, style: tokens.small),
                 const SizedBox(height: 2),
                 SelectableText(
                   event.correlationId.isEmpty
                       ? head
                       : '$head  ·  ${event.correlationId}',
-                  style: theme.typography.caption?.copyWith(color: muted),
+                  style: tokens.tabular(
+                    tokens.caption?.copyWith(color: tokens.secondaryText),
+                  ),
                 ),
               ],
             ),

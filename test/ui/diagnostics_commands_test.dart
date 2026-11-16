@@ -76,9 +76,7 @@ void main() {
   }
 
   bool commandEnabled(WidgetTester tester, String id) =>
-      tester
-          .widget<IconButton>(find.byKey(ValueKey('command-$id')))
-          .onPressed !=
+      tester.widget<Button>(find.byKey(ValueKey('command-$id'))).onPressed !=
       null;
 
   testWidgets('the export command opens one dialog and re-enables on close', (

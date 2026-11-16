@@ -83,14 +83,18 @@ void main() {
             '(${logical.width.toInt()}x${logical.height.toInt()} logical)';
         expect(tester.takeException(), isNull, reason: reason);
         expect(find.byType(MenuBar), findsOneWidget, reason: reason);
-        expect(find.byType(CommandBar), findsOneWidget, reason: reason);
+        expect(
+          find.byKey(const ValueKey('page-toolbar')),
+          findsOneWidget,
+          reason: reason,
+        );
         final menu = tester.getRect(find.byType(MenuBar));
         expect(
           menu.width,
           lessThanOrEqualTo(logical.width + 0.5),
           reason: reason,
         );
-        final bar = tester.getRect(find.byType(CommandBar));
+        final bar = tester.getRect(find.byKey(const ValueKey('page-toolbar')));
         expect(
           bar.width,
           lessThanOrEqualTo(logical.width + 0.5),
@@ -193,7 +197,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byType(MenuBar), findsOneWidget);
-    expect(find.byType(CommandBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('page-toolbar')), findsOneWidget);
     expect(
       Directionality.of(tester.element(find.byType(MenuBar))),
       TextDirection.rtl,
@@ -211,7 +215,7 @@ void main() {
       FluentTheme.of(tester.element(find.byType(MenuBar))).brightness,
       Brightness.dark,
     );
-    expect(find.byType(CommandBar), findsOneWidget);
+    expect(find.byKey(const ValueKey('page-toolbar')), findsOneWidget);
   });
 
   testWidgets('narrow window opens a workspace page without overflow', (

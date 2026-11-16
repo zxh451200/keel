@@ -2,10 +2,12 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/state/format_locale_provider.dart';
 import 'package:keel/features/form_samples/sample_parsers.dart';
 import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/ui/close_guards.dart';
+import 'package:keel/ui/widgets/ui_date_pickers.dart';
 import 'package:keel/ui/widgets/ui_dialogs.dart';
 import 'package:keel/ui/widgets/ui_layout.dart';
 
@@ -38,6 +40,9 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
   final _fieldKeys = List.generate(5, (_) => GlobalKey());
   final _lastTexts = List.filled(5, '');
   final _staleDates = <int>{};
+  // Fields the user has filled and left; they show validation feedback without
+  // waiting for the global preview submit.
+  final _touched = <int>{};
   SampleChoice _choice = SampleChoice.standard;
   SampleCurrency _currency = SampleCurrency.usd;
   SampleTimeDisplay _timeDisplay = SampleTimeDisplay.systemLocal;
@@ -58,6 +63,9 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
     super.initState();
     for (final field in _fields) {
       field.addListener(_inputChanged);
+    }
+    for (var i = 0; i < _focus.length; i++) {
+      _focus[i].addListener(() => _fieldBlurred(i));
     }
     _guards = ref.read(closeGuardsProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -153,6 +161,15 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
     });
   }
 
+  /// Validate a field as soon as the user leaves it with content in it.
+  /// Empty fields stay quiet until the global preview, so tabbing through an
+  /// untouched form does not paint every field red.
+  void _fieldBlurred(int i) {
+    if (!mounted || _focus[i].hasFocus) return;
+    if (_fields[i].text.isEmpty || _touched.contains(i)) return;
+    setState(() => _touched.add(i));
+  }
+
   void _changed(int? field) {
     if (!_canAct) return;
     setState(() {
@@ -175,6 +192,7 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
       _submitted = false;
       _preview = null;
       _staleDates.clear();
+      _touched.clear();
       _revision++;
     });
   }
@@ -255,6 +273,68 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
     );
   }
 
+  /// Optional picker entry point for both date fields. The text field stays
+  /// the single source of truth: a picked value is formatted and then checked
+  /// by the same sample parser as manual input (year range, DST gaps).
+  Future<void> _pickDateField(int index) async {
+    if (!_canAct || _confirming) return;
+    final t = AppLocalizations.of(context);
+    final withTime = index == 4;
+    final locale = widget.formatLocale;
+    final revision = _revision;
+    final now = DateTime.now();
+    final fallback = DateTime(
+      now.year.clamp(1900, 2100).toInt(),
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+    );
+    DateTime initial;
+    if (withTime) {
+      initial = parseSampleDateTime(_fields[4].text, locale) ?? fallback;
+    } else {
+      final date = parseSampleDate(_fields[3].text, locale);
+      initial = date == null
+          ? fallback
+          : DateTime(date.year, date.month, date.day);
+    }
+    String text(DateTime value) => withTime
+        ? formatSampleDateTime(value, locale)
+        : SampleCalendarDate(value.year, value.month, value.day).format(locale);
+    bool valid(DateTime value) => withTime
+        ? parseSampleDateTime(text(value), locale) != null
+        : parseSampleDate(text(value), locale) != null;
+
+    final picked = await showUiDatePicker(
+      context: context,
+      title: withTime
+          ? t.formSamplePickDateTimeAction
+          : t.formSamplePickDateAction,
+      notice: withTime ? t.formSamplePickNotice : t.formSamplePickNoticeDate,
+      cancelLabel: t.actionCancel,
+      applyLabel: t.formSamplePickApply,
+      invalidLabel: withTime
+          ? t.formSamplePickInvalid
+          : t.formSamplePickInvalidDate,
+      initial: initial,
+      withTime: withTime,
+      format: text,
+      validate: valid,
+    );
+    // While the dialog is up this route is not current, so route-based guards
+    // cannot be used after the await. The revision guard covers concurrent
+    // edits (including a reset) instead.
+    if (!mounted || _confirming || _revision != revision || picked == null) {
+      return;
+    }
+    final value = text(picked);
+    if (_fields[index].text == value) return;
+    _staleDates.remove(index);
+    // The controller listener invalidates the preview and bumps the revision.
+    _fields[index].text = value;
+  }
+
   String _choiceLabel(AppLocalizations t, SampleChoice choice) =>
       choice == SampleChoice.standard
       ? t.formSampleStandard
@@ -270,23 +350,58 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
         if (_error(i, t) case final error?) '${labels[i]}: $error',
     ];
     final pattern = sampleDatePattern(widget.formatLocale);
+    // Concrete examples are easier to copy than a pattern such as MM/dd/yyyy.
+    final exampleDate = SampleCalendarDate(
+      2026,
+      11,
+      11,
+    ).format(widget.formatLocale);
+    final exampleDateTime = formatSampleDateTime(
+      DateTime(2026, 11, 11, 14, 30),
+      widget.formatLocale,
+    );
     final preview = _preview;
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
-    final labelStyle = theme.typography.body?.copyWith(fontSize: 13);
+    final muted = UiTokens.of(context).secondaryText;
+    final labelStyle = UiTokens.of(context).small;
 
-    Widget field(int i, {String? hint}) {
-      final error = _submitted ? _error(i, t) : null;
+    Widget field(int i, {String? hint, String? example}) {
+      final showError =
+          _submitted || (_touched.contains(i) && _fields[i].text.isNotEmpty);
+      final error = showError ? _error(i, t) : null;
       return Column(
         key: _fieldKeys[i],
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(labels[i], style: labelStyle),
+          Row(
+            children: [
+              Expanded(child: Text(labels[i], style: labelStyle)),
+              if (example != null)
+                Text(
+                  t.formSampleExample(example),
+                  style: theme.typography.caption?.copyWith(color: muted),
+                ),
+            ],
+          ),
           const SizedBox(height: 6),
           TextBox(
             controller: _fields[i],
             focusNode: _focus[i],
             enabled: !_confirming,
             placeholder: hint ?? labels[i],
+            suffix: i == 3 || i == 4
+                ? UiDatePickerButton(
+                    key: Key(
+                      i == 3
+                          ? 'form-sample-pick-date'
+                          : 'form-sample-pick-date-time',
+                    ),
+                    label: i == 3
+                        ? t.formSamplePickDateAction
+                        : t.formSamplePickDateTimeAction,
+                    icon: i == 3 ? FluentIcons.calendar : FluentIcons.date_time,
+                    onPressed: _confirming ? null : () => _pickDateField(i),
+                  )
+                : null,
             onChanged: (_) => _changed(i),
             onSubmitted: (_) {
               if (!_canAct) return;
@@ -303,7 +418,7 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
               child: Text(
                 error,
                 style: theme.typography.caption?.copyWith(
-                  color: const Color(0xFFC42B1C),
+                  color: UiTokens.of(context).colors.danger,
                 ),
               ),
             ),
@@ -374,9 +489,9 @@ class FormSamplesPageState extends ConsumerState<FormSamplesPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    field(3, hint: pattern),
+                    field(3, hint: pattern, example: exampleDate),
                     const SizedBox(height: 12),
-                    field(4, hint: '$pattern HH:mm'),
+                    field(4, hint: '$pattern HH:mm', example: exampleDateTime),
                     const SizedBox(height: 8),
                     Text(
                       t.formSampleTimeDisplayNotice,
@@ -528,11 +643,10 @@ class _ComboField<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: theme.typography.body?.copyWith(fontSize: 13)),
+        Text(label, style: UiTokens.of(context).small),
         const SizedBox(height: 6),
         ComboBox<T>(
           value: value,

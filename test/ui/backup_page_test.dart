@@ -102,9 +102,7 @@ void main() {
   }
 
   bool commandEnabled(WidgetTester tester, String id) {
-    final button = tester.widget<IconButton>(
-      find.byKey(ValueKey('command-$id')),
-    );
+    final button = tester.widget<Button>(find.byKey(ValueKey('command-$id')));
     return button.onPressed != null;
   }
 

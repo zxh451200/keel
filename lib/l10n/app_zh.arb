@@ -337,6 +337,25 @@
   "workspaceShortcutHint": "按 Ctrl+K 快速打开任意页面",
   "uiUnderConstruction": "此页面正在用 Fluent 重建",
   "uiDashboard": "工作台",
+  "dashboardSummary": "{count} 个模块",
+  "@dashboardSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardRecent": "最近访问",
+  "dashboardModuleAudit": "变更记录，可筛选导出",
+  "dashboardModuleDiagnostics": "诊断包与运行日志",
+  "dashboardModuleBackup": "创建、校验与恢复",
+  "dashboardModuleCustomers": "档案与联系方式",
+  "dashboardModuleNewUser": "添加、停用与重置账号",
+  "dashboardModuleSecurity": "口令与锁定策略",
+  "dashboardModuleSettingsImport": "从文件批量导入配置",
+  "dashboardModuleTasks": "长任务进度与历史",
+  "dashboardModuleSamples": "桥接调用样例",
+  "dashboardModuleFormSamples": "格式与日期输入样例",
   "statusOpenTabs": "已打开 {count} 个标签",
   "menuLanguage": "语言",
   "langSystem": "跟随系统",
@@ -388,6 +407,21 @@
   "formSampleAmount": "金额（USD，样例固定币种）",
   "formSampleDate": "日历日期（无时区）",
   "formSampleDateTime": "本地日期时间",
+  "formSamplePickDateTimeAction": "选择日期时间",
+  "formSamplePickApply": "填入输入框",
+  "formSamplePickNotice": "选择会按当前显示格式填入输入框，仍可手动编辑。年份范围 1900–2100，时间使用本机时区。",
+  "formSamplePickInvalid": "所选日期时间无效：年份需在 1900–2100，且本机时区不能是夏令时跳过的时间。",
+  "formSamplePickDateAction": "选择日期",
+  "formSamplePickNoticeDate": "选择会按当前显示格式填入输入框，仍可手动编辑。年份范围 1900–2100。",
+  "formSamplePickInvalidDate": "所选日期无效：年份需在 1900–2100。",
+  "formSampleExample": "例如 {example}",
+  "@formSampleExample": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
   "formSampleChoice": "示例选项",
   "formSampleStandard": "标准",
   "formSamplePriority": "优先",

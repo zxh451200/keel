@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/errors/error_text.dart';
 import 'package:keel/core/state/user_provider.dart';
 import 'package:keel/features/users/state/user_draft.dart';
@@ -150,8 +151,8 @@ class _UsersPageState extends ConsumerState<UsersPage> {
         draft.confirming ||
         _confirming ||
         ref.watch(userImportOpenProvider);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
-    final labelStyle = theme.typography.body?.copyWith(fontSize: 13);
+    final muted = UiTokens.of(context).secondaryText;
+    final labelStyle = UiTokens.of(context).small;
 
     return CallbackShortcuts(
       bindings: {

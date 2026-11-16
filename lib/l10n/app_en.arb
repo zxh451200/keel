@@ -475,6 +475,25 @@
   "workspaceShortcutHint": "Press Ctrl+K to open any page",
   "uiUnderConstruction": "Rebuilding this page with Fluent",
   "uiDashboard": "Workspace",
+  "dashboardSummary": "{count} modules",
+  "@dashboardSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dashboardRecent": "Recently visited",
+  "dashboardModuleAudit": "Change log, filter and export",
+  "dashboardModuleDiagnostics": "Diagnostic packs and logs",
+  "dashboardModuleBackup": "Create, verify and restore",
+  "dashboardModuleCustomers": "Records and contact details",
+  "dashboardModuleNewUser": "Add and disable accounts",
+  "dashboardModuleSecurity": "Password and lock policy",
+  "dashboardModuleSettingsImport": "Bulk import from a file",
+  "dashboardModuleTasks": "Long-running task progress",
+  "dashboardModuleSamples": "Bridge call samples",
+  "dashboardModuleFormSamples": "Locale and date input samples",
   "statusOpenTabs": "{count, plural, =0{No open tabs} =1{1 open tab} other{{count} open tabs}}",
   "@statusOpenTabs": {
     "placeholders": {
@@ -547,6 +566,21 @@
   "formSampleAmount": "Amount (USD, fixed sample currency)",
   "formSampleDate": "Calendar date (no timezone)",
   "formSampleDateTime": "Local date-time",
+  "formSamplePickDateTimeAction": "Pick date and time",
+  "formSamplePickApply": "Fill field",
+  "formSamplePickNotice": "The selection fills the field in the current display format; manual edits are still allowed. Years 1900–2100, times use the host timezone.",
+  "formSamplePickInvalid": "Invalid selection: use a year from 1900 to 2100 and avoid times skipped by daylight saving in the host timezone.",
+  "formSamplePickDateAction": "Pick date",
+  "formSamplePickNoticeDate": "The selection fills the field in the current display format; manual edits are still allowed. Years 1900–2100.",
+  "formSamplePickInvalidDate": "Invalid selection: use a year from 1900 to 2100.",
+  "formSampleExample": "e.g. {example}",
+  "@formSampleExample": {
+    "placeholders": {
+      "example": {
+        "type": "String"
+      }
+    }
+  },
   "formSampleChoice": "Sample option",
   "formSampleStandard": "Standard",
   "formSamplePriority": "Priority",

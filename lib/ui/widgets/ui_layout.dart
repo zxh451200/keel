@@ -1,17 +1,25 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:keel/ui/tokens.dart';
 
-/// 页面标题与说明的统一排版。
+/// 页面标题与说明的统一排版；右侧可放主操作。
+///
+/// 一屏只允许一个主操作：它放在 [actions]，其余操作收进「更多」。
 class UiPageHeader extends StatelessWidget {
-  const UiPageHeader({super.key, required this.title, this.subtitle});
+  const UiPageHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.actions,
+  });
 
   final String title;
   final String? subtitle;
+  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
     final tokens = UiTokens.of(context);
-    return Column(
+    final heading = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(title, style: tokens.pageTitle),
@@ -28,10 +36,22 @@ class UiPageHeader extends StatelessWidget {
         ],
       ],
     );
+    if (actions == null) return heading;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: heading),
+        const SizedBox(width: UiTokens.gapMd),
+        actions!,
+      ],
+    );
   }
 }
 
 /// 内容卡片：可选标题行、主体、可选底栏。
+///
+/// 卡片靠「一档阴影 + 1px 描边」离开画布，而不是只靠描边；嵌入在其它卡片
+/// 里的次级面板可传 `elevated: false` 去掉阴影。
 class UiPanel extends StatelessWidget {
   const UiPanel({
     super.key,
@@ -40,6 +60,7 @@ class UiPanel extends StatelessWidget {
     this.footer,
     this.expand = false,
     this.padding = UiTokens.panelPadding,
+    this.elevated = true,
   });
 
   final Widget? header;
@@ -47,6 +68,7 @@ class UiPanel extends StatelessWidget {
   final Widget? footer;
   final bool expand;
   final EdgeInsetsGeometry padding;
+  final bool elevated;
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +83,7 @@ class UiPanel extends StatelessWidget {
         color: theme.cardColor,
         borderRadius: UiTokens.panelRadius,
         border: Border.all(color: tokens.border),
+        boxShadow: elevated ? UiTokens.cardShadow : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,12 +145,18 @@ class UiScrollablePage extends StatelessWidget {
   }
 }
 
-/// 卡片内空状态。
+/// 卡片内空状态：图标 + 一句说明 + 可选主操作。
 class UiEmpty extends StatelessWidget {
-  const UiEmpty({super.key, required this.icon, required this.message});
+  const UiEmpty({
+    super.key,
+    required this.icon,
+    required this.message,
+    this.action,
+  });
 
   final IconData icon;
   final String message;
+  final Widget? action;
 
   @override
   Widget build(BuildContext context) {
@@ -137,13 +166,26 @@ class UiEmpty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 26, color: tokens.emptyText),
-          const SizedBox(height: 10),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: tokens.panelHeaderBackground,
+              shape: BoxShape.circle,
+              border: Border.all(color: tokens.subtleBorder),
+            ),
+            child: Icon(icon, size: 26, color: tokens.emptyText),
+          ),
+          const SizedBox(height: 14),
           Text(
             message,
             textAlign: TextAlign.center,
             style: tokens.body?.copyWith(color: tokens.emptyText),
           ),
+          if (action != null) ...[
+            const SizedBox(height: UiTokens.gapLg),
+            action!,
+          ],
         ],
       ),
     );
@@ -162,6 +204,45 @@ class UiEmpty extends StatelessWidget {
   }
 }
 
+/// 长任务进度条：2px 不确定进度 + 一行说明。
+///
+/// 说明文字是这块唯一的可读信号，`liveRegion` 让读屏在任务开始时播报一次；
+/// 进度条本身只表达「还在跑」。有确定百分比时改传 [value]。
+class UiBusyStrip extends StatelessWidget {
+  const UiBusyStrip({super.key, required this.message, this.value});
+
+  final String message;
+  final double? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = UiTokens.of(context);
+    return Semantics(
+      liveRegion: true,
+      label: message,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ProgressBar(
+            value: value,
+            strokeWidth: 2,
+            semanticLabel: message,
+            activeColor: tokens.accent,
+            backgroundColor: tokens.border,
+          ),
+          const SizedBox(height: UiTokens.gapSm),
+          Text(
+            message,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.caption?.copyWith(color: tokens.secondaryText),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 轻量单行提示。
 class UiNotice extends StatelessWidget {
   const UiNotice({super.key, required this.message, this.severity});
@@ -174,6 +255,141 @@ class UiNotice extends StatelessWidget {
     return InfoBar(
       severity: severity ?? InfoBarSeverity.info,
       title: Text(message),
+    );
+  }
+}
+
+/// 状态胶囊的语义档位；颜色只用于圆点与图标，底色保持中性。
+enum UiTone { neutral, accent, success, warning, danger }
+
+/// 状态胶囊：中性底 + 6px 语义圆点，避免「处处彩色」。
+class UiStatusPill extends StatelessWidget {
+  const UiStatusPill({
+    super.key,
+    required this.label,
+    this.icon,
+    this.tone = UiTone.neutral,
+  });
+
+  final String label;
+  final IconData? icon;
+  final UiTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = UiTokens.of(context);
+    final colors = tokens.colors;
+    final color = switch (tone) {
+      UiTone.neutral => tokens.secondaryText,
+      UiTone.accent => colors.accent,
+      UiTone.success => colors.success,
+      UiTone.warning => colors.warning,
+      UiTone.danger => colors.danger,
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: tokens.panelHeaderBackground,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: tokens.subtleBorder),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null)
+            Icon(icon, size: 13, color: color)
+          else
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+          const SizedBox(width: 6),
+          // 高 DPI 下胶囊在 Wrap 里可能被压窄，文字必须能收缩。
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.caption?.copyWith(color: tokens.secondaryText),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 概览数字卡：标签 12、数值 32 等宽、可带一行脚注。
+class UiStatCard extends StatelessWidget {
+  const UiStatCard({
+    super.key,
+    required this.label,
+    required this.value,
+    this.hint,
+    this.tone = UiTone.neutral,
+  });
+
+  final String label;
+  final String value;
+  final String? hint;
+  final UiTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = UiTokens.of(context);
+    final colors = tokens.colors;
+    final accent = switch (tone) {
+      UiTone.neutral => tokens.secondaryText,
+      UiTone.accent => colors.accent,
+      UiTone.success => colors.success,
+      UiTone.warning => colors.warning,
+      UiTone.danger => colors.danger,
+    };
+    return UiPanel(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: accent,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: tokens.caption?.copyWith(color: tokens.secondaryText),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: tokens.displayNumber,
+          ),
+          if (hint != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              hint!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tokens.caption?.copyWith(color: tokens.emptyText),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/errors/error_text.dart';
 import 'package:keel/core/state/format_locale_provider.dart';
 import 'package:keel/core/state/settings_provider.dart';
@@ -270,7 +271,7 @@ class _SettingsImportPageState extends ConsumerState<SettingsImportPage> {
         ref.watch(workspaceNavigationWritableProvider);
     final preview = _previewOwner == _owner ? _preview : null;
     final overLimit = _bytes > maxSettingsImportBytes;
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     final sizeLabel = t.settingsImportSizeCounter(
       NumberFormat.decimalPattern(ref.watch(effectiveFormatLocaleProvider))
           .format(_bytes),
@@ -334,7 +335,7 @@ class _SettingsImportPageState extends ConsumerState<SettingsImportPage> {
               child: Text(
                 t.settingsImportLimit,
                 style: theme.typography.caption?.copyWith(
-                  color: const Color(0xFFC42B1C),
+                  color: UiTokens.of(context).colors.danger,
                 ),
               ),
             ),
@@ -352,7 +353,7 @@ class _SettingsImportPageState extends ConsumerState<SettingsImportPage> {
           Text(
             sizeLabel,
             style: theme.typography.caption?.copyWith(
-              color: overLimit ? const Color(0xFFC42B1C) : muted,
+              color: overLimit ? UiTokens.of(context).colors.danger : muted,
             ),
           ),
         ],
@@ -533,7 +534,7 @@ TextStyle _monoStyle({Color? color}) => TextStyle(
     'Noto Sans Mono',
     'monospace',
   ],
-  fontSize: 12.5,
+  fontSize: 13,
   height: 1.55,
   color: color,
 );
@@ -560,7 +561,7 @@ class _MetaChip extends StatelessWidget {
       child: Text(
         label,
         style: theme.typography.caption?.copyWith(
-          color: theme.typography.body?.color?.withValues(alpha: 0.62),
+          color: UiTokens.of(context).secondaryText,
         ),
       ),
     );

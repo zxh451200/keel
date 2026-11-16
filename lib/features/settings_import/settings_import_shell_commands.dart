@@ -27,6 +27,8 @@ class SettingsImportActionsRegistry
   void register(SettingsImportPageActions actions) => state = actions;
 
   void unregister(SettingsImportPageActions actions) {
+    // 页面 dispose 时 provider 可能已在销毁；Riverpod 3 在该阶段访问 state 会抛断言。
+    if (!ref.mounted) return;
     if (identical(state, actions)) state = null;
   }
 }

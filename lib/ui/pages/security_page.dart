@@ -5,6 +5,7 @@ import 'package:keel/core/state/user_provider.dart';
 import 'package:keel/features/auth/state/auth_providers.dart';
 import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/ui/ui_page.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/ui/widgets/ui_layout.dart';
 
 /// 登录保护设置：开关 + 口令（只保存 Argon2id 校验值）。
@@ -149,7 +150,10 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
         canManage &&
         !_busy &&
         (hasPassword ? _current.text.isNotEmpty : canSave);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.7);
+    final tokens = UiTokens.of(context);
+    final muted = tokens.secondaryText;
+    // 表单标签统一 13/600，和正文拉开一档；输入框本身沿用 Fluent 控件。
+    final labelStyle = tokens.small?.copyWith(fontWeight: FontWeight.w600);
 
     return UiScrollablePage(
       child: Padding(
@@ -175,7 +179,7 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                         Icon(
                           enabled ? FluentIcons.lock : FluentIcons.unlock,
                           size: 16,
-                          color: enabled ? const Color(0xFF107C10) : muted,
+                          color: enabled ? tokens.colors.success : muted,
                         ),
                         const SizedBox(width: 8),
                         Expanded(
@@ -204,7 +208,7 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (hasPassword) ...[
-                            Text(t.securityCurrent),
+                            Text(t.securityCurrent, style: labelStyle),
                             const SizedBox(height: 4),
                             TextBox(
                               key: const ValueKey('security-current'),
@@ -214,7 +218,7 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                             ),
                             const SizedBox(height: 12),
                           ],
-                          Text(t.securityNew),
+                          Text(t.securityNew, style: labelStyle),
                           const SizedBox(height: 4),
                           TextBox(
                             key: const ValueKey('security-new'),
@@ -223,7 +227,7 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                             enabled: canManage && !_busy,
                           ),
                           const SizedBox(height: 12),
-                          Text(t.securityConfirm),
+                          Text(t.securityConfirm, style: labelStyle),
                           const SizedBox(height: 4),
                           TextBox(
                             key: const ValueKey('security-confirm'),
@@ -244,8 +248,8 @@ class _SecurityPageState extends ConsumerState<SecurityPage> {
                             Text(
                               _error!,
                               key: const ValueKey('security-error'),
-                              style: const TextStyle(
-                                color: Colors.errorPrimaryColor,
+                              style: tokens.body?.copyWith(
+                                color: tokens.colors.danger,
                               ),
                             ),
                           ],

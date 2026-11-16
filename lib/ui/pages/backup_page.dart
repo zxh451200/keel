@@ -10,6 +10,7 @@ import 'package:keel/features/backup/backup_actions.dart';
 import 'package:keel/features/backup/state/backup_providers.dart';
 import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/src/rust/api/backup.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/ui/widgets/ui_layout.dart';
 
 /// 备份与恢复：恢复登记后下次启动生效，旧数据库保留。
@@ -95,8 +96,8 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final theme = FluentTheme.of(context);
-    final accent = theme.accentColor.defaultBrushFor(theme.brightness);
+    final tokens = UiTokens.of(context);
+    final accent = tokens.accent;
     final user = ref.watch(currentUserProvider).value;
     final backups = ref.watch(backupsProvider);
     final pendingState = ref.watch(pendingRestoreProvider);
@@ -110,9 +111,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
       ..minimumFractionDigits = 1
       ..maximumFractionDigits = 1;
     final formatInstant = ref.watch(regionalInstantFormatterProvider);
-    final border = (theme.typography.body?.color ?? Colors.black).withValues(
-      alpha: 0.12,
-    );
+    final border = tokens.subtleBorder;
 
     return UiScrollablePage(
       child: Padding(
@@ -123,8 +122,8 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             UiPageHeader(title: t.navBackup, subtitle: t.backupPageHint),
             const SizedBox(height: 18),
             if (busy) ...[
-              UiNotice(message: t.backupWorking),
-              const SizedBox(height: 8),
+              UiBusyStrip(message: t.backupWorking),
+              const SizedBox(height: 12),
             ],
             if (pendingState.hasError) ...[
               UiNotice(
@@ -194,6 +193,15 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                         ? UiEmpty(
                             icon: FluentIcons.archive,
                             message: t.backupEmpty,
+                            action:
+                                !busy && hasPermission(user, 'backup.create')
+                                ? FilledButton(
+                                    key: const ValueKey('backup-empty-create'),
+                                    onPressed: () =>
+                                        createBackupAction(context, ref),
+                                    child: Text(t.backupNow),
+                                  )
+                                : null,
                           )
                         : ListView.separated(
                             controller: _scroll,
@@ -215,11 +223,11 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: selected
-                                          ? accent.withValues(alpha: 0.10)
+                                          ? tokens.accentBackground
                                           : null,
                                       border: Border(
                                         left: BorderSide(
-                                          width: 2,
+                                          width: 3,
                                           color: selected
                                               ? accent
                                               : Colors.transparent,
@@ -227,7 +235,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                                       ),
                                     ),
                                     padding: const EdgeInsets.fromLTRB(
-                                      14,
+                                      12,
                                       10,
                                       16,
                                       10,
@@ -243,11 +251,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                                                 file.name,
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: theme.typography.body
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w600,
-                                                    ),
+                                                style: tokens.bodyStrong,
                                               ),
                                               const SizedBox(height: 3),
                                               Tooltip(
@@ -261,18 +265,12 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                                                 child: Text(
                                                   '${formatInstant(file.modifiedAt)}'
                                                   '  ·  ${_formatBytes(file.sizeBytes, sizeFormat, integerFormat, t)}',
-                                                  style: theme
-                                                      .typography
-                                                      .caption
-                                                      ?.copyWith(
-                                                        color: theme
-                                                            .typography
-                                                            .body
-                                                            ?.color
-                                                            ?.withValues(
-                                                              alpha: 0.6,
-                                                            ),
-                                                      ),
+                                                  style: tokens.tabular(
+                                                    tokens.caption?.copyWith(
+                                                      color:
+                                                          tokens.secondaryText,
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -292,6 +290,19 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                                                   file.name,
                                                 )
                                               : null,
+                                          style: ButtonStyle(
+                                            // 行内操作做成 ghost：列表里一排实心按钮会盖过文件名。
+                                            backgroundColor:
+                                                WidgetStateProperty.resolveWith(
+                                                  (states) => states.isHovered
+                                                      ? tokens.hoverOverlay
+                                                      : Colors.transparent,
+                                                ),
+                                            foregroundColor:
+                                                WidgetStatePropertyAll(
+                                                  tokens.secondaryText,
+                                                ),
+                                          ),
                                           child: Text(t.backupRestore),
                                         ),
                                       ],

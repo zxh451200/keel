@@ -1,5 +1,6 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/errors/error_text.dart';
 import 'package:keel/core/state/user_provider.dart';
 import 'package:keel/features/diagnostics/state/diagnostics_providers.dart';
@@ -84,7 +85,7 @@ class _HistoryState extends ConsumerState<DiagnosticHistoryDialog> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = FluentTheme.of(context);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     ref.listen(currentUserProvider, (previous, next) {
       final a = previous?.asData?.value;
       final b = next.asData?.value;
@@ -130,7 +131,7 @@ class _HistoryState extends ConsumerState<DiagnosticHistoryDialog> {
                 child: Text(
                   t.diagSearchIdInvalid,
                   style: theme.typography.caption?.copyWith(
-                    color: const Color(0xFFC42B1C),
+                    color: UiTokens.of(context).colors.danger,
                   ),
                 ),
               ),
@@ -143,7 +144,7 @@ class _HistoryState extends ConsumerState<DiagnosticHistoryDialog> {
             if (_error != null && allowed)
               Text(
                 t.loadFailed(errorText(t, _error!)),
-                style: TextStyle(color: const Color(0xFFC42B1C)),
+                style: TextStyle(color: UiTokens.of(context).colors.danger),
               ),
             if (page != null && page.truncated) Text(t.diagHistoryTruncated),
             if (page != null && page.lines.isEmpty) Text(t.diagHistoryEmpty),

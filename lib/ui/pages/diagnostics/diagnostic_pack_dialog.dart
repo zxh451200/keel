@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/errors/error_text.dart';
 import 'package:keel/core/state/user_provider.dart';
 import 'package:keel/features/diagnostics/state/diagnostics_providers.dart';
@@ -102,7 +103,7 @@ class _DiagnosticPackDialogState extends ConsumerState<DiagnosticPackDialog> {
     final user = ref.watch(currentUserProvider);
     final allowed = hasPermission(user.asData?.value, 'diagnostics.export');
     final preview = _preview;
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     return PopScope<String>(
       canPop: !_busy,
       child: CallbackShortcuts(
@@ -134,7 +135,7 @@ class _DiagnosticPackDialogState extends ConsumerState<DiagnosticPackDialog> {
                   Text(
                     t.diagPackChooseCategory,
                     style: theme.typography.caption?.copyWith(
-                      color: const Color(0xFFC42B1C),
+                      color: UiTokens.of(context).colors.danger,
                     ),
                   ),
                 if (!allowed && user.hasValue)
@@ -143,7 +144,7 @@ class _DiagnosticPackDialogState extends ConsumerState<DiagnosticPackDialog> {
                     child: Text(
                       t.errPermission,
                       style: theme.typography.caption?.copyWith(
-                        color: const Color(0xFFC42B1C),
+                        color: UiTokens.of(context).colors.danger,
                       ),
                     ),
                   ),
@@ -159,7 +160,9 @@ class _DiagnosticPackDialogState extends ConsumerState<DiagnosticPackDialog> {
                     liveRegion: true,
                     child: Text(
                       errorText(t, error),
-                      style: TextStyle(color: const Color(0xFFC42B1C)),
+                      style: TextStyle(
+                        color: UiTokens.of(context).colors.danger,
+                      ),
                     ),
                   ),
                   Text(t.diagPackReprepareHint),
@@ -224,7 +227,7 @@ class _Check extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = FluentTheme.of(context);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

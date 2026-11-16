@@ -26,6 +26,7 @@ import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/src/rust/api/users.dart';
 import 'package:keel/ui/close_guards.dart';
 import 'package:keel/ui/pages/dashboard_page.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/ui/ui_page.dart';
 import 'package:keel/ui/widgets/ui_layout.dart';
 
@@ -303,7 +304,8 @@ class _KeelShellState extends ConsumerState<KeelShell> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = FluentTheme.of(context);
-    final accent = theme.accentColor.defaultBrushFor(theme.brightness);
+    final tokens = UiTokens.of(context);
+    final accent = tokens.accent;
     final pagesByKind = {for (final page in widget.pages) page.kind: page};
     final locale = ref.watch(localeProvider);
     final formatLocale = ref.watch(formatLocaleProvider);
@@ -316,7 +318,7 @@ class _KeelShellState extends ConsumerState<KeelShell> {
     String titleOf(String kind) => kind == 'dashboard'
         ? t.uiDashboard
         : pagesByKind[kind]?.title(t) ?? kind;
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.6);
+    final muted = tokens.secondaryText;
 
     // 只渲染仍注册的 kind；持久化里的未知 kind 直接隐藏，不回写清除。
     final pagesByKindAll = {for (final page in widget.pages) page.kind: page};
@@ -611,62 +613,16 @@ class _KeelShellState extends ConsumerState<KeelShell> {
                     ),
                   ],
                 ),
-                CommandBar(
-                  primaryItems: [
-                    CommandBarButton(
-                      icon: const Icon(FluentIcons.home, size: 14),
-                      label: Text(t.uiDashboard),
-                      onPressed: () => _openPage('dashboard'),
-                    ),
-                    for (final command in pageCommands)
-                      CommandBarButton(
-                        key: ValueKey('command-${command.id}'),
-                        icon: Icon(command.icon ?? FluentIcons.play, size: 14),
-                        label: Text(command.label(t)),
-                        onPressed: commandEnabled(command)
-                            ? () => command.onInvoke(context, ref)
-                            : null,
-                      ),
-                    CommandBarButton(
-                      icon: const Icon(FluentIcons.chrome_close, size: 14),
-                      label: Text(t.menuCloseTab),
-                      onPressed: _active == 'dashboard'
-                          ? null
-                          : () => _closePage(),
-                    ),
-                    CommandBarButton(
-                      icon: Icon(
-                        ref.watch(themeModeProvider) == KeelThemeMode.dark
-                            ? FluentIcons.sunny
-                            : FluentIcons.clear_night,
-                        size: 14,
-                      ),
-                      label: Text(t.menuTheme),
-                      onPressed: () {
-                        final notifier = ref.read(themeModeProvider.notifier);
-                        final mode = ref.read(themeModeProvider);
-                        notifier.set(
-                          mode == KeelThemeMode.dark
-                              ? KeelThemeMode.light
-                              : KeelThemeMode.dark,
-                        );
-                      },
-                    ),
-                    CommandBarButton(
-                      icon: const Icon(FluentIcons.search, size: 14),
-                      label: Text(t.menuOpenPage),
-                      onPressed: _quickSearch,
-                    ),
-                  ],
-                ),
                 _GlobalNotices(),
                 Expanded(
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Container(
-                        width: navigation.navCollapsed ? 48 : 232,
-                        color: theme.cardColor,
+                        width: navigation.navCollapsed
+                            ? UiSize.sidebarCollapsed
+                            : UiSize.sidebar,
+                        color: tokens.colors.menu,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -801,10 +757,10 @@ class _KeelShellState extends ConsumerState<KeelShell> {
                                               onFavorite: () =>
                                                   toggleFavorite(page.kind),
                                             ),
-                                        _NavSectionLabel(label: t.navRecent),
-                                        if (recentPages.isEmpty)
-                                          _NavEmptyHint(text: t.navRecentEmpty)
-                                        else
+                                        // 最近访问为空时整段不出现：页签已经表达「开着的页面」，
+                                        // 一条「暂无最近访问」的提示只是占位噪声。
+                                        if (recentPages.isNotEmpty) ...[
+                                          _NavSectionLabel(label: t.navRecent),
                                           for (final page in recentPages)
                                             _NavRow(
                                               page: page,
@@ -820,53 +776,115 @@ class _KeelShellState extends ConsumerState<KeelShell> {
                                               onFavorite: () =>
                                                   toggleFavorite(page.kind),
                                             ),
+                                        ],
                                       ],
                               ),
                             ),
                           ],
                         ),
                       ),
-                      Container(
-                        width: 1,
-                        color: (theme.typography.body?.color ?? Colors.black)
-                            .withValues(alpha: 0.12),
-                      ),
+                      Container(width: 1, color: tokens.divider),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            // 页签与「当前页命令」同一行：命令跟着活动页走，不另占一条
+                            // 全局工具条；页面名只在页签上出现一次，不再重复。
                             Container(
-                              height: 38,
+                              key: const ValueKey('page-toolbar'),
+                              height: UiSize.tabBar,
                               decoration: BoxDecoration(
-                                color: theme.cardColor,
+                                color: tokens.colors.panel,
                                 border: Border(
-                                  bottom: BorderSide(
-                                    color:
-                                        (theme.typography.body?.color ??
-                                                Colors.black)
-                                            .withValues(alpha: 0.12),
-                                  ),
+                                  bottom: BorderSide(color: tokens.divider),
                                 ),
                               ),
-                              child: ListView(
-                                scrollDirection: Axis.horizontal,
-                                children: [
-                                  for (final kind in _open)
-                                    _TabButton(
-                                      key: _tabKeys.putIfAbsent(
-                                        kind,
-                                        () =>
-                                            GlobalKey(debugLabel: 'tab-$kind'),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final commandWidth =
+                                      (constraints.maxWidth - 180).clamp(
+                                        0.0,
+                                        560.0,
+                                      );
+                                  return Row(
+                                    children: [
+                                      Expanded(
+                                        child: ListView(
+                                          scrollDirection: Axis.horizontal,
+                                          children: [
+                                            for (final kind in _open)
+                                              _TabButton(
+                                                key: _tabKeys.putIfAbsent(
+                                                  kind,
+                                                  () => GlobalKey(
+                                                    debugLabel: 'tab-$kind',
+                                                  ),
+                                                ),
+                                                label: titleOf(kind),
+                                                selected: kind == _active,
+                                                accent: accent,
+                                                onPressed: () =>
+                                                    _openPage(kind),
+                                                onClose: kind == 'dashboard'
+                                                    ? null
+                                                    : () => _closePage(kind),
+                                              ),
+                                          ],
+                                        ),
                                       ),
-                                      label: titleOf(kind),
-                                      selected: kind == _active,
-                                      accent: accent,
-                                      onPressed: () => _openPage(kind),
-                                      onClose: kind == 'dashboard'
-                                          ? null
-                                          : () => _closePage(kind),
-                                    ),
-                                ],
+                                      if (pageCommands.isNotEmpty &&
+                                          commandWidth > 80) ...[
+                                        Container(
+                                          width: 1,
+                                          height: 16,
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                          ),
+                                          color: tokens.divider,
+                                        ),
+                                        ConstrainedBox(
+                                          constraints: BoxConstraints(
+                                            maxWidth: commandWidth,
+                                          ),
+                                          child: SingleChildScrollView(
+                                            scrollDirection: Axis.horizontal,
+                                            child: Row(
+                                              children: [
+                                                for (final command
+                                                    in pageCommands)
+                                                  _ToolbarButton(
+                                                    buttonKey: ValueKey(
+                                                      'command-${command.id}',
+                                                    ),
+                                                    icon:
+                                                        command.icon ??
+                                                        FluentIcons.play,
+                                                    label: command.label(t),
+                                                    onPressed:
+                                                        commandEnabled(command)
+                                                        ? () =>
+                                                              command.onInvoke(
+                                                                context,
+                                                                ref,
+                                                              )
+                                                        : null,
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                      const SizedBox(width: 4),
+                                      _ToolbarIconButton(
+                                        key: const ValueKey('toolbar-search'),
+                                        icon: FluentIcons.search,
+                                        tooltip: t.menuOpenPage,
+                                        onPressed: _quickSearch,
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                             Expanded(
@@ -943,31 +961,46 @@ class _NavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Button(
         onPressed: onPressed,
         style: ButtonStyle(
-          backgroundColor: WidgetStatePropertyAll(
-            selected ? accent.withValues(alpha: 0.10) : Colors.transparent,
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => selected
+                ? tokens.accentBackground
+                : states.isHovered
+                ? tokens.hoverOverlay
+                : Colors.transparent,
           ),
           foregroundColor: WidgetStatePropertyAll(
-            selected ? accent : theme.typography.body?.color,
+            selected ? accent : tokens.foreground,
           ),
           padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 10),
+            EdgeInsetsDirectional.only(start: 7, end: 10),
           ),
           shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
           ),
         ),
         child: SizedBox(
           width: double.infinity,
-          height: 30,
+          height: UiSize.navRow,
           child: Row(
             children: [
-              Icon(icon, size: 16),
+              // 选中指示条：只靠 10% 底色在白侧栏上几乎看不出，必须给位置。
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 140),
+                width: 3,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: selected ? accent : Colors.transparent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(icon, size: 18),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -996,16 +1029,14 @@ class _NavEmptyHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     return Padding(
       padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 10, 6),
       child: Text(
         text,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: theme.typography.caption?.copyWith(
-          color: theme.typography.body?.color?.withValues(alpha: 0.5),
-        ),
+        style: tokens.caption?.copyWith(color: tokens.emptyText),
       ),
     );
   }
@@ -1018,15 +1049,15 @@ class _NavSectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     return Padding(
-      padding: const EdgeInsetsDirectional.fromSTEB(10, 10, 10, 4),
+      padding: const EdgeInsetsDirectional.fromSTEB(10, 14, 10, 4),
       child: Text(
         label.toUpperCase(),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: theme.typography.caption?.copyWith(
-          color: theme.typography.body?.color?.withValues(alpha: 0.6),
+        style: tokens.caption?.copyWith(
+          color: tokens.emptyText,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.6,
         ),
@@ -1036,7 +1067,10 @@ class _NavSectionLabel extends StatelessWidget {
 }
 
 /// 侧栏一行：导航按钮 + 收藏切换。key 用稳定的 kind，方便测试与读屏。
-class _NavRow extends StatelessWidget {
+///
+/// 星标只在「已收藏」或「鼠标悬停该行」时显形，宽度始终预留 24，避免行内跳动；
+/// 热区固定 24×24（此前 12px 图标约 20 的可点区域容易点错）。
+class _NavRow extends StatefulWidget {
   const _NavRow({
     required this.page,
     required this.label,
@@ -1058,36 +1092,76 @@ class _NavRow extends StatelessWidget {
   final VoidCallback onFavorite;
 
   @override
+  State<_NavRow> createState() => _NavRowState();
+}
+
+class _NavRowState extends State<_NavRow> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _NavButton(
-            key: ValueKey('nav-${page.kind}'),
-            icon: page.icon,
-            label: label,
-            selected: selected,
-            accent: accent,
-            onPressed: onPressed,
-          ),
-        ),
-        Tooltip(
-          message: favorite
-              ? AppLocalizations.of(context).navRemoveFavorite
-              : AppLocalizations.of(context).navAddFavorite,
-          child: IconButton(
-            key: ValueKey('nav-favorite-${page.kind}'),
-            icon: Icon(
-              favorite
-                  ? FluentIcons.favorite_star_fill
-                  : FluentIcons.favorite_star,
-              size: 12,
-              color: favorite ? accent : muted,
+    final tokens = UiTokens.of(context);
+    final t = AppLocalizations.of(context);
+    final reveal = widget.favorite || _hovered;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: Row(
+        children: [
+          Expanded(
+            child: _NavButton(
+              key: ValueKey('nav-${widget.page.kind}'),
+              icon: widget.page.icon,
+              label: widget.label,
+              selected: widget.selected,
+              accent: widget.accent,
+              onPressed: widget.onPressed,
             ),
-            onPressed: onFavorite,
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 2),
+            child: AnimatedOpacity(
+              opacity: reveal ? 1 : 0,
+              duration: const Duration(milliseconds: 120),
+              child: Tooltip(
+                message: widget.favorite
+                    ? t.navRemoveFavorite
+                    : t.navAddFavorite,
+                child: Button(
+                  key: ValueKey('nav-favorite-${widget.page.kind}'),
+                  onPressed: widget.onFavorite,
+                  style: ButtonStyle(
+                    padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+                    backgroundColor: WidgetStateProperty.resolveWith(
+                      (states) => states.isHovered
+                          ? tokens.hoverOverlay
+                          : Colors.transparent,
+                    ),
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Icon(
+                      widget.favorite
+                          ? FluentIcons.favorite_star_fill
+                          : FluentIcons.favorite_star,
+                      size: 12,
+                      color: widget.favorite
+                          ? widget.accent
+                          : widget.muted ?? tokens.emptyText,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1112,7 +1186,7 @@ class _NavIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     return Tooltip(
       message: label,
       child: Padding(
@@ -1121,19 +1195,126 @@ class _NavIconButton extends StatelessWidget {
           key: ValueKey('nav-$kind'),
           onPressed: onPressed,
           style: ButtonStyle(
-            backgroundColor: WidgetStatePropertyAll(
-              selected ? accent.withValues(alpha: 0.10) : Colors.transparent,
+            backgroundColor: WidgetStateProperty.resolveWith(
+              (states) => selected
+                  ? tokens.accentBackground
+                  : states.isHovered
+                  ? tokens.hoverOverlay
+                  : Colors.transparent,
             ),
             foregroundColor: WidgetStatePropertyAll(
-              selected ? accent : theme.typography.body?.color,
+              selected ? accent : tokens.foreground,
             ),
             padding: const WidgetStatePropertyAll(EdgeInsets.zero),
             shape: WidgetStatePropertyAll(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
             ),
           ),
-          child: SizedBox(width: 40, height: 30, child: Icon(icon, size: 16)),
+          child: SizedBox(
+            width: 40,
+            height: UiSize.navRow,
+            child: Icon(icon, size: 18),
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// 页面级命令按钮：26 高、12 号字，hover 才出底色；禁用时降到辅助色。
+class _ToolbarButton extends StatelessWidget {
+  const _ToolbarButton({
+    required this.buttonKey,
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
+
+  /// key 挂在真正的 [Button] 上，测试与读屏都拿它判断可用性。
+  final Key buttonKey;
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = UiTokens.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 1),
+      child: Tooltip(
+        message: label,
+        child: Button(
+          key: buttonKey,
+          onPressed: onPressed,
+          style: ButtonStyle(
+            padding: const WidgetStatePropertyAll(
+              EdgeInsets.symmetric(horizontal: 8),
+            ),
+            backgroundColor: WidgetStateProperty.resolveWith(
+              (states) => states.isHovered && onPressed != null
+                  ? tokens.hoverOverlay
+                  : Colors.transparent,
+            ),
+            foregroundColor: WidgetStateProperty.resolveWith(
+              (states) => onPressed == null
+                  ? tokens.emptyText
+                  : states.isHovered
+                  ? tokens.foreground
+                  : tokens.secondaryText,
+            ),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+            ),
+          ),
+          child: SizedBox(
+            height: 26,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 13),
+                const SizedBox(width: 6),
+                Text(label, style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 工具条右侧的图标按钮（搜索）：热区固定 26×26。
+class _ToolbarIconButton extends StatelessWidget {
+  const _ToolbarIconButton({
+    super.key,
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = UiTokens.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: Button(
+        onPressed: onPressed,
+        style: ButtonStyle(
+          padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) =>
+                states.isHovered ? tokens.hoverOverlay : Colors.transparent,
+          ),
+          foregroundColor: WidgetStatePropertyAll(tokens.secondaryText),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          ),
+        ),
+        child: SizedBox(width: 26, height: 26, child: Icon(icon, size: 13)),
       ),
     );
   }
@@ -1157,92 +1338,102 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
-    final body = theme.typography.body?.color ?? Colors.black;
-    final foreground = selected ? accent : body.withValues(alpha: 0.78);
-    final divider = body.withValues(alpha: 0.10);
+    final tokens = UiTokens.of(context);
+    final foreground = selected ? tokens.foreground : tokens.secondaryText;
     return Tooltip(
       message: label,
       child: Container(
         constraints: const BoxConstraints(maxWidth: 220),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: selected ? theme.scaffoldBackgroundColor : Colors.transparent,
-          border: Border(
-            top: BorderSide(
-              color: selected ? accent : Colors.transparent,
-              width: 2,
-            ),
-            right: BorderSide(color: selected ? Colors.transparent : divider),
-          ),
+          // 选中页签取画布色：和下方内容同色，页签才「长」在内容上，
+          // 而不是浮在工具条上的一块白卡。
+          color: selected ? tokens.colors.page : Colors.transparent,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Column(
           children: [
-            Button(
-              onPressed: onPressed,
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (selected) return Colors.transparent;
-                  return states.isHovered
-                      ? body.withValues(alpha: 0.05)
-                      : Colors.transparent;
-                }),
-                padding: WidgetStatePropertyAll(
-                  EdgeInsetsDirectional.only(
-                    start: 12,
-                    end: onClose == null ? 12 : 4,
-                  ),
-                ),
-                shape: const WidgetStatePropertyAll(RoundedRectangleBorder()),
-                foregroundColor: WidgetStatePropertyAll(foreground),
-              ),
-              child: SizedBox(
-                height: 36,
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 170),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.start,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: selected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                        color: foreground,
+            // 选中用「顶部 2px 主色 + 白色页签」表达，未选中与内容同底、不画边框。
+            Container(height: 2, color: selected ? accent : Colors.transparent),
+            Expanded(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Button(
+                    onPressed: onPressed,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStateProperty.resolveWith(
+                        (states) => selected || !states.isHovered
+                            ? Colors.transparent
+                            : tokens.hoverOverlay,
+                      ),
+                      padding: WidgetStatePropertyAll(
+                        EdgeInsetsDirectional.only(
+                          start: 12,
+                          end: onClose == null ? 12 : 4,
+                        ),
+                      ),
+                      shape: const WidgetStatePropertyAll(
+                        RoundedRectangleBorder(),
+                      ),
+                      foregroundColor: WidgetStatePropertyAll(foreground),
+                    ),
+                    child: SizedBox(
+                      height: 32,
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 168),
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.start,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                              color: foreground,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  if (onClose != null)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(end: 4),
+                      child: Button(
+                        onPressed: onClose,
+                        style: ButtonStyle(
+                          padding: const WidgetStatePropertyAll(
+                            EdgeInsets.zero,
+                          ),
+                          backgroundColor: WidgetStateProperty.resolveWith(
+                            (states) => states.isHovered
+                                ? tokens.hoverOverlay
+                                : Colors.transparent,
+                          ),
+                          shape: WidgetStatePropertyAll(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          foregroundColor: WidgetStatePropertyAll(
+                            tokens.secondaryText,
+                          ),
+                        ),
+                        child: const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Icon(FluentIcons.chrome_close, size: 9),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-            if (onClose != null)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 6),
-                child: Button(
-                  onPressed: onClose,
-                  style: ButtonStyle(
-                    padding: const WidgetStatePropertyAll(EdgeInsets.all(4)),
-                    backgroundColor: WidgetStateProperty.resolveWith(
-                      (states) => states.isHovered
-                          ? body.withValues(alpha: 0.08)
-                          : Colors.transparent,
-                    ),
-                    shape: WidgetStatePropertyAll(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
-                    foregroundColor: WidgetStatePropertyAll(
-                      body.withValues(alpha: 0.8),
-                    ),
-                  ),
-                  child: const Icon(FluentIcons.chrome_close, size: 9),
-                ),
-              ),
           ],
         ),
       ),
@@ -1259,94 +1450,117 @@ class _StatusBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = AppLocalizations.of(context);
-    final theme = FluentTheme.of(context);
     final status = ref.watch(appStatusProvider).value;
     final user = ref.watch(currentUserProvider).value;
-    final accent = theme.accentColor.defaultBrushFor(theme.brightness);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.6);
+    final tokens = UiTokens.of(context);
+    final accent = tokens.accent;
+    final muted = tokens.secondaryText;
     final activities = ref
         .watch(currentActivitiesProvider)
         .map((activity) => currentActivityLabel(t, activity))
         .toList();
     Widget item(Widget child) => Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: child,
     );
     return Container(
-      constraints: const BoxConstraints(minHeight: 28),
-      color: theme.cardColor,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        runSpacing: 4,
+      // 高度贴合内容：22 是目标值，文字放大时允许长高而不是被裁掉。
+      constraints: const BoxConstraints(minHeight: UiSize.statusBar),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      decoration: BoxDecoration(
+        color: tokens.colors.menu,
+        border: Border(top: BorderSide(color: tokens.divider)),
+      ),
+      child: Row(
         children: [
-          item(
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: status?.databaseReady == true
-                        ? const Color(0xFF107C10)
-                        : const Color(0xFFC42B1C),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  status?.databaseReady == true
-                      ? t.statusDbReady
-                      : t.statusDbUnavailable,
-                  style: theme.typography.caption?.copyWith(color: muted),
-                ),
-              ],
-            ),
-          ),
-          item(
-            Text(
-              status == null ? '—' : t.statusVersion(status.version),
-              style: theme.typography.caption?.copyWith(color: muted),
-            ),
-          ),
-          if (activities.isNotEmpty)
-            item(
-              Tooltip(
-                message: activities.join('\n'),
-                child: Semantics(
-                  liveRegion: true,
-                  label: activities.join(', '),
-                  child: Button(
-                    key: const ValueKey('current-activities-details'),
-                    onPressed: ModalRoute.of(context)?.isCurrent == false
-                        ? null
-                        : onShowActivities,
-                    child: Row(
+          // 左侧信息收成一组：数据库状态 → 版本 → 进行中任务都在左边，
+          // 不再被 spaceBetween 摊到整条状态栏的中间去。
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  item(
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: ProgressRing(
-                            strokeWidth: 2,
-                            activeColor: accent,
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: status?.databaseReady == true
+                                ? tokens.colors.success
+                                : tokens.colors.danger,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          t.statusActiveOperations(activities.length),
-                          style: theme.typography.caption?.copyWith(
-                            color: muted,
-                          ),
+                          status?.databaseReady == true
+                              ? t.statusDbReady
+                              : t.statusDbUnavailable,
+                          style: tokens.caption?.copyWith(color: muted),
                         ),
                       ],
                     ),
                   ),
-                ),
+                  item(
+                    Text(
+                      status == null ? '—' : t.statusVersion(status.version),
+                      style: tokens.caption?.copyWith(color: muted),
+                    ),
+                  ),
+                  if (activities.isNotEmpty)
+                    item(
+                      Tooltip(
+                        message: activities.join('\n'),
+                        child: Semantics(
+                          liveRegion: true,
+                          label: activities.join(', '),
+                          child: Button(
+                            key: const ValueKey('current-activities-details'),
+                            onPressed:
+                                ModalRoute.of(context)?.isCurrent == false
+                                ? null
+                                : onShowActivities,
+                            style: ButtonStyle(
+                              padding: const WidgetStatePropertyAll(
+                                EdgeInsets.symmetric(horizontal: 6),
+                              ),
+                              shape: const WidgetStatePropertyAll(
+                                RoundedRectangleBorder(),
+                              ),
+                              backgroundColor: const WidgetStatePropertyAll(
+                                Colors.transparent,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 12,
+                                  height: 12,
+                                  child: ProgressRing(
+                                    strokeWidth: 2,
+                                    activeColor: accent,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  t.statusActiveOperations(activities.length),
+                                  style: tokens.caption?.copyWith(color: muted),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
+          ),
           _UserMenu(user: user, accent: accent, onOpenPage: onOpenPage),
         ],
       ),
@@ -1526,8 +1740,7 @@ class _QuickSearchDialogState extends State<_QuickSearchDialog> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final theme = FluentTheme.of(context);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.6);
+    final muted = UiTokens.of(context).secondaryText;
     final matches = widget.pages.where((page) {
       final title = page.title(t).toLowerCase();
       return _text.isEmpty ||
@@ -1563,7 +1776,8 @@ class _QuickSearchDialogState extends State<_QuickSearchDialog> {
                   ? Center(
                       child: Text(
                         t.quickPageSearchEmpty,
-                        style: theme.typography.caption?.copyWith(color: muted),
+                        style: UiTokens.of(context).caption
+                            ?.copyWith(color: muted),
                       ),
                     )
                   : ListView(
@@ -1595,9 +1809,8 @@ class _QuickSearchDialogState extends State<_QuickSearchDialog> {
                                   Expanded(child: Text(page.title(t))),
                                   Text(
                                     page.kind,
-                                    style: theme.typography.caption?.copyWith(
-                                      color: muted,
-                                    ),
+                                    style: UiTokens.of(context).caption
+                                        ?.copyWith(color: muted),
                                   ),
                                 ],
                               ),

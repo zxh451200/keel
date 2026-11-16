@@ -696,6 +696,7 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = FluentTheme.of(context);
+    final tokens = UiTokens.of(context);
     final user = ref.watch(currentUserProvider);
     final page = ref.watch(customersPageProvider);
     final filter = ref.watch(customerFilterProvider);
@@ -794,6 +795,8 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 },
                 child: Text(t.actionReset),
               ),
+              // 筛选与操作分两段：左边「查什么」，右边「对选中项做什么」。
+              Container(width: 1, height: 20, color: tokens.subtleBorder),
               FilledButton(
                 key: const ValueKey('customers-new'),
                 onPressed: canManage && !_busy ? () => _openEditor() : null,
@@ -823,6 +826,13 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                 onPressed: canManage && hasSelection && !_busy
                     ? _deleteSelected
                     : null,
+                style: ButtonStyle(
+                  foregroundColor: WidgetStateProperty.resolveWith(
+                    (states) => states.isDisabled
+                        ? tokens.emptyText
+                        : tokens.colors.danger,
+                  ),
+                ),
                 child: Text(t.customersDelete),
               ),
             ],
@@ -849,6 +859,13 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
                     ? UiEmpty(
                         icon: FluentIcons.search,
                         message: t.customersEmpty,
+                        action: canManage && !_busy
+                            ? FilledButton(
+                                key: const ValueKey('customers-empty-new'),
+                                onPressed: () => _openEditor(),
+                                child: Text(t.customersNew),
+                              )
+                            : null,
                       )
                     : _buildGrid(
                         t,
@@ -884,20 +901,28 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     final base = theme.brightness == Brightness.dark
         ? const TrinaGridStyleConfig.dark()
         : const TrinaGridStyleConfig();
-    final selection = tokens.accent.withValues(alpha: 0.12);
+    final selection = tokens.accentBackground;
     final style = base.copyWith(
       // 面板已经画了底色和描边，网格自身保持透明并去掉边框。
       gridBackgroundColor: const Color(0x00000000),
       rowColor: const Color(0x00000000),
+      // 选中用实色浅蓝底（不是 12% 透明），在白卡片上边界更干净。
       activatedColor: selection,
       unfocusedSelectionColor: selection,
-      rowHeight: (34 * textScale).clamp(30.0, 72.0),
-      columnHeight: (32 * textScale).clamp(28.0, 68.0),
+      // 悬停行给一层极浅底色，鼠标扫过时能锁定行，不用眯眼数格子。
+      enableRowHoverColor: true,
+      rowHoveredColor: tokens.hoverOverlay,
+      cellColorInEditState: tokens.colors.panel,
+      rowHeight: (36 * textScale).clamp(32.0, 76.0),
+      columnHeight: (34 * textScale).clamp(30.0, 72.0),
       gridBorderWidth: 0,
       gridPadding: 0,
+      gridBorderRadius: BorderRadius.zero,
+      // 只留横向分隔线：竖向网格线在高密度表里是噪声。
       enableCellBorderVertical: false,
-      enableCellBorderHorizontal: false,
+      enableCellBorderHorizontal: true,
       enableColumnBorderVertical: false,
+      enableColumnBorderHorizontal: true,
       borderColor: tokens.divider,
       defaultCellPadding: const EdgeInsets.symmetric(
         horizontal: 14,
@@ -908,18 +933,13 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
         vertical: 8,
       ),
       cellTextStyle:
-          theme.typography.body?.copyWith(fontSize: 13) ??
-          const TextStyle(fontSize: 13),
+          UiTokens.of(context).small ?? const TextStyle(fontSize: 13),
       columnTextStyle:
-          theme.typography.caption?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.typography.body?.color?.withValues(alpha: 0.72),
-          ) ??
+          tokens.tableHeader ??
           const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
     );
-    final body = theme.typography.body?.copyWith(fontSize: 13);
+    final body = UiTokens.of(context).small;
     final muted = body?.copyWith(color: tokens.secondaryText);
-    final activeColor = tokens.colors.success;
 
     TrinaColumn column(
       String title,
@@ -1009,10 +1029,36 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             _statusField,
             _statusWidth,
             renderer: (context) {
+              // 状态用「圆点 + 文字」而不是整格变绿：颜色不是唯一线索，
+              // 文字仍是正文字色，扫读时不会一行绿一行黑。
               final isActive = context.row.cells[_activeField]?.value == true;
-              return _cellText(
-                context,
-                body?.copyWith(color: isActive ? activeColor : body.color),
+              final label = context.cell.value?.toString() ?? '';
+              return Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isActive
+                          ? tokens.colors.success
+                          : tokens.emptyText,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: body?.copyWith(
+                        color: isActive
+                            ? tokens.foreground
+                            : tokens.secondaryText,
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           ),
@@ -1021,7 +1067,9 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
             _updatedField,
             _updatedWidth,
             renderer: _textRenderer(
-              theme.typography.caption?.copyWith(color: tokens.secondaryText),
+              tokens.tabular(
+                theme.typography.caption?.copyWith(color: tokens.secondaryText),
+              ),
             ),
           ),
           // 仅供选中映射、编辑/粘贴拼请求与状态着色的隐藏列。
@@ -1092,9 +1140,10 @@ class _CustomersPageState extends ConsumerState<CustomersPage> {
     bool canManage,
     CustomerItem? selected,
   ) {
-    final theme = FluentTheme.of(context);
-    final style = theme.typography.caption?.copyWith(
-      color: theme.typography.body?.color?.withValues(alpha: 0.62),
+    final tokens = UiTokens.of(context);
+    // 页码与合计走等宽数字：翻页时文字宽度不抖。
+    final style = tokens.tabular(
+      tokens.caption?.copyWith(color: tokens.secondaryText),
     );
     void go(int page) => ref.read(customerFilterProvider.notifier).state = ref
         .read(customerFilterProvider)

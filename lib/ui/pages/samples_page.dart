@@ -1,4 +1,5 @@
 import 'package:fluent_ui/fluent_ui.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/api/bridge.dart';
 import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/src/rust/api/ping.dart' show PingRequest, PingResponse;
@@ -111,7 +112,7 @@ class _SamplePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = FluentTheme.of(context);
     final t = AppLocalizations.of(context);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     final code = theme.typography.body?.copyWith(fontSize: 13, height: 1.55);
     return UiPanel(
       header: Row(

@@ -1,4 +1,4 @@
-# Run each desktop integration entry in its own app process and owned data root.
+﻿# Run each desktop integration entry in its own app process and owned data root.
 # Requires generated FRB/l10n sources and the Flutter/native toolchain.
 [CmdletBinding()]
 param(
@@ -30,9 +30,18 @@ function Invoke-IsolatedIntegrationTest {
         $env:KEEL_DATA_DIR = $testDir
         $env:KEEL_FRB_TEST_TOKEN = $token
         Write-Host "`n> flutter test $Target -d $Device" -ForegroundColor Cyan
-        & flutter test $Target -d $Device 2>&1 |
-            Tee-Object -FilePath $LogPath | Out-Host
-        $Record.exit_code = $LASTEXITCODE
+        # flutter(.bat) 会把下载提示一类信息写到 stderr；在 Stop 策略下这些行会被当成
+        # 终止性错误直接中断脚本（表现为 exit_code=null、日志只有一行下载提示）。
+        # 这里只在调用期间放宽为 Continue，真正的失败仍由 $LASTEXITCODE 判定。
+        $previousTestEap = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            & flutter test $Target -d $Device 2>&1 |
+                Tee-Object -FilePath $LogPath | Out-Host
+            $Record.exit_code = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousTestEap
+        }
         if ($Record.exit_code -ne 0) {
             throw "flutter failed with exit code $($Record.exit_code). Stop at this entry: $Target"
         }

@@ -1,5 +1,6 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/errors/error_text.dart';
 import 'package:keel/core/state/app_status_provider.dart';
 import 'package:keel/core/state/database_provider.dart';
@@ -107,7 +108,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 Text(
                   t.loginHint,
                   style: theme.typography.body?.copyWith(
-                    color: theme.typography.body?.color?.withValues(alpha: 0.7),
+                    color: UiTokens.of(context).secondaryText,
                   ),
                 ),
                 const SizedBox(height: 20),

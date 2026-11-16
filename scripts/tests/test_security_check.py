@@ -28,8 +28,10 @@ class SecurityTests(unittest.TestCase):
         # directory (0xC0000135 -> silent exit 127) when the interpreter lives
         # elsewhere; exec'ing the real path keeps the DLL search on its own dir.
         python3 = tools / "python3"
-        with open(python3, "w", newline="\n") as stream:
-            stream.write("#!/bin/bash\nexec " + Path(sys.executable).as_posix() + ' "$@"\n')
+        python3.write_text(
+            "#!/bin/bash\nexec " + Path(sys.executable).as_posix() + ' "$@"\n',
+            newline="\n",
+        )
         python3.chmod(0o755)
         for name in ("bash", "dirname"):
             (tools / name).symlink_to(shutil.which(name))

@@ -74,14 +74,15 @@ void main() {
 
   setUp(() => saved = []);
 
-  testWidgets('sections show empty hints until pages are pinned or visited', (
+  testWidgets('favorites keeps its hint, an empty recent list stays hidden', (
     tester,
   ) async {
     await pump(tester);
     expect(find.text('FAVORITES'), findsOneWidget);
     expect(find.text('No favorites yet.'), findsOneWidget);
-    expect(find.text('RECENTLY VISITED'), findsOneWidget);
-    expect(find.text('No recently visited pages.'), findsOneWidget);
+    // 最近访问为空时整段不渲染：页签已经表达「开着的页面」，空提示只是噪声。
+    expect(find.text('RECENTLY VISITED'), findsNothing);
+    expect(find.text('No recently visited pages.'), findsNothing);
   });
 
   testWidgets('favorite star pins and unpins a page', (tester) async {

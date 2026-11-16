@@ -99,7 +99,7 @@ void main() {
     expect(ran, 1);
 
     // isEnabled=false 的命令按钮禁用，点击不会执行。
-    final blocked = tester.widget<IconButton>(
+    final blocked = tester.widget<Button>(
       find.byKey(const ValueKey('command-demo.blocked')),
     );
     expect(blocked.onPressed, isNull);

@@ -68,3 +68,6 @@ lib/l10n/app_localizations*.dart
 # POC 隔离包的生成物（flutter pub get / gen-l10n 会重建）
 poc/*/build/
 poc/*/lib/l10n/poc_localizations*.dart
+
+# 会话工具的本地记忆笔记，不入库
+/.workbuddy/

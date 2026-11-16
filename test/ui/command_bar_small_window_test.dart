@@ -116,14 +116,18 @@ void main() {
 
   void expectChromeFits(WidgetTester tester, String reason) {
     expect(tester.takeException(), isNull, reason: reason);
-    final bar = tester.getRect(find.byType(CommandBar));
+    final bar = tester.getRect(find.byKey(const ValueKey('page-toolbar')));
     expect(
       bar.width,
       lessThanOrEqualTo(logicalWidth(tester) + 0.5),
       reason: reason,
     );
     // 命令要么在命令栏里可点，要么被收进溢出菜单；断言不应抛溢出异常。
-    expect(find.byType(CommandBar), findsOneWidget, reason: reason);
+    expect(
+      find.byKey(const ValueKey('page-toolbar')),
+      findsOneWidget,
+      reason: reason,
+    );
   }
 
   testWidgets('backup commands fit the smallest window', (tester) async {

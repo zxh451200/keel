@@ -4,6 +4,181 @@
 
 ## 0. 当前状态（先读，别假设）
 
+- 2026-11-12 日期时间输入组件收口（共享选择器 + 范围选择器提升 + 两处真缺陷修复）：
+  `lib/ui/widgets/ui_date_pickers.dart` 现在承载全站唯二的日期时间输入组件——
+  单值 `showUiDatePicker`（日历 + 可选 24h 时钟，格式/校验由调用方注入，文本框仍是
+  唯一事实来源）与本批新增的 `showUiDateRangePicker`（范围日历，原审计页私有
+  `_DateRangeDialog` 整体上提为共享组件，audit_page 只留调用；双端选中后显示
+  调用方注入的区间预览）。审计页日期范围行为不变（清除/取消/应用、min/max
+  1900–2100、locale 跟随），未新增 ARB 键。新增
+  `test/ui/ui_date_range_picker_test.dart` 4 项：未选满时应用禁用、日历点选返回
+  两端、初值预览与应用返回、清除动作；测试里发现并修复**真缺陷**——fluent 4.17
+  `CalendarView.didUpdateWidget` 会在 `initialStart` 属性变化时把选择回灌给
+  `onSelectionChanged`，对话框把用户选取回传给它（`initialStart: _selected`）就
+  形成 build 期 setState 重入（旧审计对话框同样带病，此前从未被测试触达）；两个
+  对话框都改为只传打开时的初值、选取结果只存在回调里。范围对话框内容包进
+  `SingleChildScrollView`（加了预览行后 620 高度约束下溢出 23px）。
+  同批修复首页「最近访问」chip 在 640x360 的横向溢出（长页面标题如
+  `Standard form (local interaction sample)` 固有宽度撑破 Wrap 行宽，chip 文本
+  改 `Flexible + maxLines:1 + ellipsis`；该溢出会被 shell 的 IndexedStack 常驻
+  首页放大成任何页面上 `takeException` 都能抓到，上一会话遗留的
+  `tmp_overflow_debug_test.dart` 就是在查它，本批复现、修复后删除该临时测试）。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **227 项全过**、
+  `check_sources.py` PASS、`dart format` 0 差异（136 文件）。Rust 未改，未跑
+  cargo；集成测试在最终树上 **7/7 PASS**
+  （`build/reports/integration-windows-3027e386bf4b4a57a1b6783999d1d1cf/summary.json`，
+  2026-11-12 15:07–15:24 UTC，真实窗口 + 真实 Rust 库；P02 RSS
+  592.9→648.7 MiB，与既往波动一致，无遗留 busy、末轮可重开）。
+  注意集成 7 入口仍均不打开日期选择对话框，CalendarView 实际点选
+  只有 widget 测试覆盖。
+  **安全审计**：提交前 Mimosa 拦截判
+  `scripts/tests/test_security_check.py` 夹具「路径穿越」high——实际是临时目录内
+  写 python3 bash 桩，无外部输入，属误报；夹具改 `write_text` 后 Python 工具
+  回归 **89 项全过**（1 skip 合理；本机需 Git Bash（`D:\chengxu\Git`）在 PATH 且
+  从仓库根跑，`shutil.which('bash')` 才有值），Mimosa 完整重扫 **0 findings**
+  （208 依赖包，封印 `sha256:63ed6da9`）。
+  **踩坑记录**：禁止用 PowerShell `Get-Content/Set-Content` 改 UTF-8 源码——
+  本机代码页 GBK 下会把整文件中文按 GBK 解码再以 UTF-8 写回造成全文件乱码，
+  且句号「。」的尾字节 0x82 与换行合并后逆向还原不可恢复；本批 audit_page 按此
+  损坏过一次，从 HEAD 恢复后用 Edit 工具重放改动（`[IO.File]::ReadAllText/
+  WriteAllText` 显式 UTF-8 可用，仍建议一律走 Edit/Write 工具）。
+
+- 2026-11-10 最终树上的集成复核（关闭此前三批的「证据滞后」缺口）：
+  `integration-check.ps1 -Device windows` **7/7 PASS**
+  （`build/reports/integration-windows-f03b128794824ab3bd282695f9637734/summary.json`，
+  13:58–14:11 UTC，真实窗口 + 真实 Rust 库，覆盖审计 / 登录 / 当前 API / 导出历史 /
+  网格存储 / 交互与内存 / 桥接样例）。此树已包含：命令栏并入页签行、状态栏分组、
+  最近访问为空不渲染、页签配色、`UiBusyStrip`、全站样式收口（10 文件）。
+  **踩坑记录**：首跑在 `auth_test` 处 FAIL，`exit_code=0` 但脚本报
+  「文件 keel.db 正由另一进程使用」——是上一轮手工启动的 `keel.exe` 残留进程占住隔离数据目录，
+  不是测试失败。重跑前先确认 `Get-Process keel` 为空、并清掉 `%TEMP%\keel-frb-*` 残留目录，
+  否则清理阶段抛错会把通过的入口判成 FAIL。
+  同批确认：D 盘 10.7 GB 空闲时无需删 `rust/target` 也能完成（首次重建约 4.5 GB，
+  完成后剩约 4.8 GB）；删除 target 只是强制 Rust 全量重编，没有收益。
+
+- 2026-11-10 全站样式收口（10 个文件，机械替换）：把散落在页面里的
+  `theme.typography.body?.color?.withValues(alpha: 0.62/0.7)` 统一换成 `UiTokens.of(context).secondaryText`，
+  `theme.typography.body?.copyWith(fontSize: 13)` 换成 `UiTokens.of(context).small`，
+  硬编码 `const Color(0xFFC42B1C)` 换成 `UiTokens.of(context).colors.danger`。涉及
+  audit / customers / users / tasks / form_samples / samples / login / settings_import 与
+  diagnostics 两个对话框。原因：这些 alpha 值与硬编码红在深色下会失准（0.62 叠在深底上偏灰、
+  `#C42B1C` 在深底上对比度不足），且与 token 体系并存会让后续调色出现「改了一处、漏了一片」。
+  替换后 `form_samples_page.dart` 有一处 `theme` 局部变量失效，同批删除。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **203 项全过**、`check_sources.py` PASS、
+  `dart format` 0 差异（133 文件）。**边界**：深色下的观感仍以 `build/ui-shot/shell-dark.png`
+  为参考（测试环境渲染），未做真机系统主题切换；集成已在本批之后的最终树上 7/7 PASS（见顶部条目）。
+
+- 2026-11-10 首次自查渲染（新增截图工具）并据图修三处真问题：新增
+  `tool/ui_capture/capture_test.dart`（不在 `test/` 下，不参与常规汇总）——用 `FontLoader` 载入
+  系统字体（否则测试字形全是方块）、`debugDisableShadows = false` 打开阴影、
+  `RenderRepaintBoundary.toImage` 落盘 `build/ui-shot/*.png`，产出浅色外壳 / 深色外壳 /
+  组件样板三张图。看图后修的三个问题：**(1)** 32px 页面工具条只剩一行页名，与页签、页面标题
+  三处重复且白占 32px——删除整条工具条，把「当前页命令 + 搜索」并进 34px 页签行
+  （命令区 `可用宽度 - 180`，上限 560，窄窗横向滚动），`page-toolbar` key 移到页签行；
+  chrome 118 → 86px。**(2)** 状态栏 `Wrap(spaceBetween)` 把版本号摊到正中间——改为左侧一组
+  （状态点 / 版本 / 进行中任务，横向可滚动）+ 右侧用户菜单。
+  **(3)** 首页区块标题右侧细线用 `subtleBorder` 在画布上几乎不可见，改 `border`。
+  另据图调整：页签栏底改 `panel`、选中页签改 `page`（与内容同色，消除「浮起白卡」感）；
+  `UiBusyStrip` 进度条轨道由 `borderSubtle` 改 `border`；最近访问为空时整段不渲染
+  （`shell_nav_test` 对应用例改为断言「不出现」更名）。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **203 项全过**、`check_sources.py` PASS、
+  `dart format` 0 差异（lib+test+integration_test+tool 133 文件）。
+  **边界**：渲染图是测试环境渲染，不等于真机 125% / 系统主题切换下的观感，也不构成读屏验收；
+  功能层由最终树上的集成 7/7 兜底（见顶部条目）。
+
+- 2026-11-10 长任务进度反馈（P3 最后一项）：新增 `UiBusyStrip`（`lib/ui/widgets/ui_layout.dart`）——
+  2px 不确定 `ProgressBar` + 一行 12px 说明，外层 `Semantics(liveRegion: true, label: message)`，
+  说明文字是读屏唯一信号（进度条本身只是「还在跑」的视觉表达）；将来任务队列能给出百分比时
+  直接传 `value`。备份页忙时把 `UiNotice` 换成该控件（复用 `backupWorking` 文案），诊断页在
+  `diagnosticPackBusyProvider` 为真时插在页头下方（复用 `diagPackWorking`，**未新增 ARB 键**，
+  避免动生成区）。新增 `test/ui/busy_strip_test.dart` 3 项：文字 + 不确定进度条、`liveRegion`
+  语义与 label、`value` 透传；语义句柄必须在用例体内 `dispose()`（框架在 tearDown 之前就校验），
+  断言用 `node.flagsCollection.isLiveRegion`（`hasFlag` 已废弃）。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **203 项全过**（200 → +3）、
+  `check_sources.py` PASS、`dart format` 0 差异。集成已在最终树上 7/7 PASS（见顶部条目）；
+  注意这 7 个入口都不打开备份/诊断页，所以它们证明的是「外壳改动没有破坏启动与既有页面」，
+  不是这两页忙碌态的运行时证据（那部分由 `busy_strip_test` 与页面测试覆盖）。
+
+- 2026-11-10 UI 改造收尾与集成验证：**登录保护页**（`lib/ui/pages/security_page.dart`）接 token——
+  说明文字 0.7 alpha 改 `secondaryText`、状态图标 `#107C10` 改 `colors.success`、错误行
+  `Colors.errorPrimaryColor` 改 `colors.danger`，三个表单标签统一 13/600。**集成脚本缺陷修复**
+  （`scripts/integration-check.ps1`）：`flutter test ... 2>&1 | Tee-Object` 在
+  `$ErrorActionPreference='Stop'` 下会把 flutter(.bat) 写到 stderr 的「Flutter assets will be
+  downloaded…」当成终止性错误直接中断脚本（现象：entry `exit_code=null`、日志只有一行下载提示、
+  首个入口 4.6 分钟即 FAIL）；改为调用期间局部 `Continue` + `try/finally` 还原，成败仍由
+  `$LASTEXITCODE` 判定。**集成入口同步**：`integration_test/interaction_memory_test.dart` 里
+  `widget<IconButton>(command-$id)` 改为 `widget<Button>`（命令按钮已不是 IconButton，
+  这是 P1 改造的遗漏，widget 测试改过、集成测试漏改）。修完后
+  `integration-check.ps1 -Device windows` **7/7 PASS**
+  （`build/reports/integration-windows-4faf9688070a48abaa803aa2ce431ffe/summary.json`，
+  真实窗口 + 真实 Rust 库）。门禁：`flutter analyze` 0 项、`flutter test` 200 项全过、
+  `check_sources.py` PASS、`dart format` 0 差异。仍未做的：长任务进度条、真机 125%/深色目视、
+  读屏（Narrator/Orca）朗读验收。
+  环境备注：本机 D 盘被构建产物写满两次（`build/windows` 每个集成入口都会重建，
+  `.dart_tool/flutter_build` 也会涨到十几 GB），清理 `build/windows`、`build/flutter_assets`、
+  `build/test_cache`、`.dart_tool/flutter_build` 等可再生目录 + 清空回收站后恢复；
+  跑集成测试前先确认 D 盘剩余 ≥ 10 GB。
+
+- 2026-11-10 备份 / 诊断页精修（P3 收尾）：**备份**（`lib/ui/pages/backup_page.dart`）选中行由
+  10% 主色改实色 `accentBackground`、左侧指示条 2→3px、内边距左移 2px 对齐；文件名用
+  `tokens.bodyStrong`，时间与大小行改 `tabularFigures` + 次要色并加 tooltip 精确字节提示；
+  行内「恢复」按钮改 ghost（透明底 + hover 浮层），列表不再被一排实心按钮压住；分隔线改用
+  `borderSubtle`；空态补「立即备份」主操作（新 key `backup-empty-create`）。
+  **诊断**（`lib/ui/pages/diagnostics_page.dart`）每条日志前置 6px 等级圆点（error 红 / warn 琥珀 /
+  info 灰，文字仍保留等级词，颜色不是唯一线索）；摘要 13 号走 `tokens.small`，时间与关联 ID 行
+  等宽 + 次要色；分隔线 7% alpha 改 `borderSubtle`；筛选无效提示由硬编码 `#C42B1C` 改
+  `tokens.colors.danger`；「有筛选但无结果」的空态补「重置」动作（复用 `t.actionReset`）。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **200 项全过**、`check_sources.py` PASS、
+  `dart format` 0 差异。Rust 未改，未跑 cargo / 集成测试；长任务进度条（需任务队列暴露百分比）
+  与真机深色/125% 目视仍未做。
+
+- 2026-11-10 表格页精修（P3 前两页）：**往来单位**（`lib/ui/pages/customers_page.dart`）网格
+  行高 34→36、表头 34、只留横向分隔线（竖向网格线去掉）、开启行悬停底色、选中改实色
+  `accentBackground`（原 12% 透明）、状态列改「圆点 + 文字」（颜色不再是唯一线索，文字回归
+  正文字色）、更新时间列加 `tabularFigures`、页脚页码/合计等宽；筛选与操作之间加 1px 分隔线，
+  删除按钮走 danger 前景色（禁用时回辅助色），空态补「新建」主操作（新 key `customers-empty-new`）。
+  **审计**（`lib/ui/pages/audit_page.dart`）：表头由 4% 主色改 `sunken` 底 + 底部 1px `border`、
+  文字改 `tokens.tableHeader`（12/600 次要色）、纵向内边距 4→8；行文字改 13 等宽；选中同样改
+  实色浅蓝，键盘光标保留 1px 主色描边以区分「焦点」与「选中」；页脚注释改 token 语义色并等宽。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **200 项全过**、`check_sources.py` PASS、
+  `dart format` 0 差异。Rust 未改，未跑 cargo / 集成测试；网格悬停与斑马纹取舍（本页选
+  「分隔线 + 悬停」而非斑马纹）仍需真机目视确认。
+
+- 2026-11-10 命令栏改造（P1，方案见 `docs/UI_REDESIGN.md` §5.1）：删除 40px 全局
+  `CommandBar`（原有 9 个按钮：首页 / 当前页命令 / 关闭标签 / 主题 / 搜索），改为 32px
+  **页面工具条**：只渲染当前页命令（`_ToolbarButton`，26 高、12 号字、hover 出底色、禁用降为
+  辅助色）+ 左侧 12px 页面名定位提示 + 右端搜索图标。首页交给侧栏、关闭标签交给页签 ×、
+  主题留在「视图」菜单，快捷键不变。命令区上限 560，窄窗口按 `可用宽度 - 140` 收缩并横向
+  滚动，640×360 与 200% 缩放均不溢出。命令按钮的 key 仍为 `command-<id>`，但挂在内部
+  `Button` 上（不是 `CommandBarButton`/`IconButton`），`shell_commands_test` /
+  `backup_page_test` / `diagnostics_commands_test` / `settings_import_commands_test` 的
+  `widget<IconButton>` 断言同批改为 `widget<Button>`；`shell_dpi_test` 与
+  `command_bar_small_window_test` 的 `find.byType(CommandBar)` 改为
+  `find.byKey(ValueKey('page-toolbar'))`。同批修一处真实缺陷：`SettingsImportActionsRegistry
+  .unregister` 在页面 dispose、provider 已销毁时写 `state` 会触发 Riverpod 3 断言，改为
+  `if (!ref.mounted) return;` 先行返回。门禁实跑：`flutter analyze` 0 项、`flutter test`
+  **200 项全过**、`check_sources.py` PASS、`dart format` 0 差异。Rust 未改，未跑 cargo / 集成测试；
+  工具条在 125% 真机与深色下的实际观感仍需人工复核。
+
+- 2026-11-09 UI 视觉与密度改造（P0 + 部分 P1/P2，方案见 `docs/UI_REDESIGN.md`）：
+  `lib/ui/tokens.dart` 重写为三层 token（`UiTokens` 尺寸/间距/阴影、`UiPalette` 实色、
+  `UiThemeTokens` 字面样式），新增 `UiSize` 固定尺寸与 `displayNumber`/`small`/`tableHeader`
+  等字面，数字统一 `tabularFigures`。色板改为 canvas `#F4F6F9` / surface `#FFF` /
+  sunken `#FAFBFC` / chrome `#FBFCFE`，强调色由 Fluent 默认蓝改为 `#2C5BE0`（深色分
+  `accent`/`accentFill` 两值，避免白字对比度不达标），语义色补 warning 与 subtle 档；
+  字阶收口为 22/15/16/14/12，中文取消负字距。`theme.dart` 用 `Typography.raw` +
+  `AccentColor.swatch` 落地（fluent_ui 4.17.0 签名已核对）。外壳：侧栏 232→240、
+  导航行 32 + 3px 选中指示条、收藏星标改悬停显形（热区 24×24）、标签条 38→34 并与内容同底、
+  状态栏 28→22 且改用 menu 底 + 上边线。组件：`UiPanel` 加一档阴影与 `elevated` 开关，
+  `UiEmpty` 改圆形图标底 + 可选主操作，新增 `UiStatusPill`/`UiStatCard`，`UiPageHeader`
+  支持 `actions` 槽。首页改为「标题 → 中性状态胶囊 → 带细线的区块标题 → 悬停抬升的模块卡」。
+  门禁实跑：`flutter analyze` 0 项、`flutter test` **200 项全过**、`check_sources.py` PASS、
+  `dart format` 无差异。Rust 未改，未重跑 cargo / 集成测试；125% 真机、深色与读屏仍未人工复核。
+  本机环境备注：`HTTP_PROXY/HTTPS_PROXY` 指向 127.0.0.1:63357 会让 `flutter test` 的
+  flutter_tester WebSocket 升级返回 400，需 `env -u HTTP_PROXY -u HTTPS_PROXY ... NO_PROXY=127.0.0.1`
+  才能跑；另 `.dart_tool/flutter_build` 曾涨到 12.9 GB 导致 D 盘只剩 0.26 GB、测试卡在 loading，
+  清掉该可再生缓存后恢复（构建缓存会重新生成）。
+
 - 2026-11-09 网格语义树断言：trina 单元格无显式 Semantics（数据靠内部 Text 隐式暴露），
   往来单位网格外层加 `Semantics(container: true, label: t.navCustomers)` 区域标签（复用现有
   ARB 键）。新增 `test/ui/customers_grid_semantics_test.dart` 5 项：区域/表头/单元格进入语义树、

@@ -1,6 +1,7 @@
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/core/errors/error_text.dart';
 import 'package:keel/core/state/format_locale_provider.dart';
 import 'package:keel/core/state/user_provider.dart';
@@ -63,7 +64,7 @@ class TasksPage extends ConsumerWidget {
       'failed' => t.taskPhaseFailed,
       _ => t.taskPhaseUnknown,
     };
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
@@ -481,7 +482,7 @@ class _HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = FluentTheme.of(context);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: SizedBox(
@@ -492,10 +493,7 @@ class _HistoryRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    row.taskId,
-                    style: theme.typography.body?.copyWith(fontSize: 13),
-                  ),
+                  Text(row.taskId, style: UiTokens.of(context).small),
                   const SizedBox(height: 2),
                   Text(
                     phaseLabel,

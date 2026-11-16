@@ -15,7 +15,9 @@ import 'package:keel/features/grid/grid_column_settings_dialog.dart';
 import 'package:keel/l10n/app_localizations.dart';
 import 'package:keel/src/rust/api/audit.dart' show AuditSort;
 import 'package:keel/ui/actions/audit_export_actions.dart';
+import 'package:keel/ui/tokens.dart';
 import 'package:keel/features/audit/ui/audit_print_actions.dart';
+import 'package:keel/ui/widgets/ui_date_pickers.dart';
 import 'package:keel/ui/widgets/ui_layout.dart';
 
 /// Fluent 版审计日志：服务端分页、关键词过滤、排序与分页导航。
@@ -138,11 +140,19 @@ class _AuditPageState extends ConsumerState<AuditPage> {
 
   Future<void> _pickRange() async {
     final current = ref.read(auditFilterProvider);
-    final picked = await showDialog<_RangePick>(
+    final t = AppLocalizations.of(context);
+    final locale = ref.read(effectiveFormatLocaleProvider);
+    final picked = await showUiDateRangePicker(
       context: context,
-      builder: (_) => _DateRangeDialog(
-        initialStart: current.startDate,
-        initialEnd: current.endDate,
+      title: t.auditDateRange,
+      notice: t.auditDateRangeHint,
+      cancelLabel: t.actionCancel,
+      clearLabel: t.auditClearDates,
+      applyLabel: t.auditDateRangeApply,
+      initial: UiDateRange(start: current.startDate, end: current.endDate),
+      format: (start, end) => t.auditDateRangeSelected(
+        DateFormat.yMd(locale).format(start),
+        DateFormat.yMd(locale).format(end),
       ),
     );
     if (!mounted || picked == null) return;
@@ -223,7 +233,7 @@ class _AuditPageState extends ConsumerState<AuditPage> {
       ref.watch(effectiveFormatLocaleProvider),
     );
     final accent = theme.accentColor.defaultBrushFor(theme.brightness);
-    final muted = theme.typography.body?.color?.withValues(alpha: 0.62);
+    final muted = UiTokens.of(context).secondaryText;
     final printData = page.asData?.value;
     final printColumns = [
       for (final column in layout.visibleColumns)
@@ -874,11 +884,8 @@ class _HeaderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
-    final style = theme.typography.caption?.copyWith(
-      fontWeight: FontWeight.w600,
-      color: theme.typography.body?.color?.withValues(alpha: 0.62),
-    );
+    final tokens = UiTokens.of(context);
+    final style = tokens.tableHeader;
     Widget head(
       String field,
       String label, {
@@ -917,7 +924,7 @@ class _HeaderRow extends StatelessWidget {
                 Icon(
                   descending ? FluentIcons.down : FluentIcons.up,
                   size: 9,
-                  color: theme.typography.body?.color,
+                  color: tokens.secondaryText,
                 ),
                 if (sort.length > 1) ...[
                   const SizedBox(width: 2),
@@ -954,8 +961,11 @@ class _HeaderRow extends StatelessWidget {
     }
 
     return Container(
-      color: accent.withValues(alpha: 0.04),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+      decoration: BoxDecoration(
+        color: tokens.panelHeaderBackground,
+        border: Border(bottom: BorderSide(color: tokens.border)),
+      ),
       child: Row(
         children: [
           for (final column in columns)
@@ -994,8 +1004,9 @@ class _AuditRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
-    final style = theme.typography.body?.copyWith(fontSize: 13);
+    final tokens = UiTokens.of(context);
+    // 时间、计数等等宽显示，行与行之间数字不对齐会显得很乱。
+    final style = tokens.tabular(tokens.small);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
@@ -1090,20 +1101,14 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = FluentTheme.of(context);
-    final style = theme.typography.caption?.copyWith(
-      color: theme.typography.body?.color?.withValues(alpha: 0.62),
+    final tokens = UiTokens.of(context);
+    final style = tokens.tabular(
+      tokens.caption?.copyWith(color: tokens.secondaryText),
     );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(
-            color: (theme.typography.body?.color ?? Colors.black).withValues(
-              alpha: 0.12,
-            ),
-          ),
-        ),
+        border: Border(top: BorderSide(color: tokens.divider)),
       ),
       child: Row(
         children: [
@@ -1141,92 +1146,6 @@ class _Footer extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _RangePick {
-  const _RangePick({this.start, this.end, this.clear = false});
-  final DateTime? start;
-  final DateTime? end;
-  final bool clear;
-}
-
-class _DateRangeDialog extends StatefulWidget {
-  const _DateRangeDialog({this.initialStart, this.initialEnd});
-
-  final DateTime? initialStart;
-  final DateTime? initialEnd;
-
-  @override
-  State<_DateRangeDialog> createState() => _DateRangeDialogState();
-}
-
-class _DateRangeDialogState extends State<_DateRangeDialog> {
-  DateTime? _start;
-  DateTime? _end;
-
-  @override
-  void initState() {
-    super.initState();
-    _start = widget.initialStart;
-    _end = widget.initialEnd;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final theme = FluentTheme.of(context);
-    return ContentDialog(
-      constraints: const BoxConstraints(maxWidth: 430, maxHeight: 620),
-      title: Text(t.auditDateRange),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            t.auditDateRangeHint,
-            style: theme.typography.caption?.copyWith(
-              color: theme.typography.body?.color?.withValues(alpha: 0.62),
-            ),
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 370,
-            child: CalendarView(
-              selectionMode: CalendarViewSelectionMode.range,
-              initialStart: _start,
-              initialEnd: _end,
-              locale: Localizations.localeOf(context),
-              onSelectionChanged: (data) {
-                setState(() {
-                  _start = data.startDate;
-                  _end = data.endDate;
-                });
-              },
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        Button(
-          onPressed: () =>
-              Navigator.of(context).pop(const _RangePick(clear: true)),
-          child: Text(t.auditClearDates),
-        ),
-        Button(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.actionCancel),
-        ),
-        FilledButton(
-          onPressed: _start != null && _end != null
-              ? () =>
-                    Navigator.of(context)
-                        .pop(_RangePick(start: _start, end: _end))
-              : null,
-          child: Text(t.auditDateRangeApply),
-        ),
-      ],
     );
   }
 }

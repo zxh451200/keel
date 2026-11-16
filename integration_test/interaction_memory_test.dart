@@ -134,7 +134,7 @@ String? _highlightedRow(WidgetTester tester, List<String> codes) {
 }
 
 bool _commandEnabled(WidgetTester tester, String id) =>
-    tester.widget<IconButton>(find.byKey(ValueKey('command-$id'))).onPressed !=
+    tester.widget<Button>(find.byKey(ValueKey('command-$id'))).onPressed !=
     null;
 
 void main() {
