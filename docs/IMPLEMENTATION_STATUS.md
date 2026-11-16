@@ -300,6 +300,46 @@
 - **边界**：这是语义树层面的自动化回归，**不是读屏验收**——Narrator/Orca 的实际朗读顺序、
   焦点遍历与网格选中态播报仍 NOT RUN（X06）；trina 不暴露行选中语义，未伪造该断言。
 
+## 2026-11-12 台账重扫增量（日期组件收口、样式收口与 X02 attestation 工作流；优先于上方各历史节）
+
+- **日期时间输入组件收口（§1.3 表单、U01）**：`lib/ui/widgets/ui_date_pickers.dart` 现承载全站
+  唯二的日期时间输入组件——单值 `showUiDatePicker`（日历 + 可选 24h 时钟，格式/校验由调用方
+  注入）与本批上提的 `showUiDateRangePicker`（范围日历，原审计页私有 `_DateRangeDialog` 整体
+  上提为共享组件，审计页行为不变）；修复 fluent 4.17 `CalendarView.didUpdateWidget` 把
+  `initialStart` 属性变化回灌给 `onSelectionChanged` 造成的 build 期 setState 重入（新旧对话框
+  均带病，此前无测试触达）；修复首页「最近访问」chip 在 640×360 的横向溢出。新增
+  `test/ui/ui_date_range_picker_test.dart` 4 项；门禁：`flutter analyze` 0 项、
+  `flutter test` **227 项全过**、`check_sources.py` PASS、format 0 差异、
+  `integration-check.ps1 -Device windows` **7/7 PASS**
+  （`build/reports/integration-windows-3027e386bf4b4a57a1b6783999d1d1cf/summary.json`，
+  2026-11-12 15:07–15:24 UTC；P02 RSS 592.9→648.7 MiB 与既往波动一致）。集成 7 入口均不打开
+  日期选择对话框，CalendarView 实际点选只有 widget 测试覆盖；U02/U04 平台证据不因此关闭。
+- **历史行更正（以当前源码与实跑为准）**：U01 的「完整设计令牌尚待整理」已被 2026-11-09
+  三层 token 重写（`UiTokens`/`UiPalette`/`UiThemeTokens`）与 2026-11-10 样式收口（alpha/硬编码色
+  统一接 token）取代；F02 的「跨单元格区域粘贴、内联编辑仍只在隔离 POC」已在往来单位生产页
+  接入（code/name/phone/email 内联编辑 + Ctrl+V 区域粘贴一次事务，2026-11-09）；V01 的 7/7
+  PASS 证据由 2026-11-12 复跑刷新（上表快照仍指向 2026-11-09 运行）；2026-11-10 UI 批次
+  （命令栏并入页签行、`UiBusyStrip`、备份/诊断/表格页精修、`tool/ui_capture` 截图自查）已在
+  AGENTS.md §0 逐批记录，此处不重复展开，各自真机/DPI/读屏边界不变。
+- **X02 attestation 推进（部分关闭，仍开放外部条件）**：`.github/workflows/release.yml` 新增独立
+  `attest-build-provenance` job——`id-token: write` + `attestations: write` 只授予该 job（发布 job
+  其余步骤保持 `contents: read` 最小权限），下载通过全部门禁的候选 artifact 后对候选 ZIP 产出
+  构建来源证明；`actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333`（v8.0.2）与
+  `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8`（v4.2.2）固定完整
+  commit SHA。「待实现」部分关闭；**在真实 runner 产出 provenance 并被下游验证之前不得声称
+  发布可追溯**，X02 的外部条件状态不变。
+- **Python 工具回归环境备注**：`scripts/tests` 89 项在本机全过（1 skip 合理）的运行条件是
+  Git Bash（本机 `D:\chengxu\Git`）在 PATH 且**从仓库根目录**执行 discover——夹具以相对路径
+  读 `rust/Cargo.lock`/`pubspec.lock` 且 `shutil.which('bash')` 需要 Git Bash；从 `scripts/tests`
+  目录内运行会因 CWD 与 which 失败产生假 error，不是回归。夹具 `test_security_check.py` 的
+  python3 bash 桩由 `open(path,"w")` 改为 `write_text`（提交前 Mimosa 误报「路径穿越」的清理，
+  实为临时目录内无外部输入的夹具写入）。
+- **仍然开放（未因本批改变）**：跨功能通用后台任务视图/历史与跨功能任务协议（F04/§5、§10.1）、
+  归档（ZIP）导入与跨配置/SQLite 事务（S02/§4.4，随业务批量导入定义）、X01–X11 全部外部条件
+  （签名、attestation 真实产出、Defender/SmartScreen、远端标签保护、Linux 发行与桌面验收、
+  干净环境安装/升级/卸载、联网公告库扫描、CI 真实 runner 首跑、品牌素材授权、发布者身份策略）、
+  真机 125%/深色/读屏/多屏与退出清单（U02–U04/X06）、两平台文件交互与打印专项（S01/P01/F01）。
+
 ## 外部条件阻塞清单（发布与平台，仓库内代码不能自证）
 
 以下各项要么依赖仓库外的证书、账号、真实 runner、干净机器或发行渠道，要么需要产品决策；

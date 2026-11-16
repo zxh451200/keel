@@ -1,5 +1,7 @@
 # Keel 发布候选证据链。
 # v* 标签触发；标签保护须另在仓库 ruleset 配置，签名等发布门禁仍需独立放行。
+# attestation job 独立持有 id-token/attestations 最小权限；在真实 runner 产出
+# provenance 之前不得声称发布可追溯（X02）。
 name: Release candidate
 
 on:
@@ -222,3 +224,37 @@ jobs:
             build/reports/signature-binding.txt
           if-no-files-found: error
           retention-days: 30
+
+  # 构建来源证明（X02/D03）：id-token 与 attestations 只授予本 job，
+  # 不提升发布 job 其余步骤的权限。attestation 失败即任务失败并阻止宣称可追溯；
+  # 真实 runner 产出与下游验证仍须单独取证。
+  attest-build-provenance:
+    name: 生成构建来源证明
+    needs: windows-release-candidate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: 下载通过全部门禁的候选
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: keel-release-candidate-${{ github.ref_name }}
+
+      - name: 确认候选 ZIP 存在
+        run: |
+          set -euo pipefail
+          zip_path="$(find . -type f -name 'keel-windows-*.zip' | head -n 1)"
+          if [[ -z "$zip_path" ]]; then
+            echo "::error::candidate ZIP not found in downloaded artifact"
+            exit 1
+          fi
+          echo "zip_path=$zip_path" >> "$GITHUB_OUTPUT"
+        id: locate
+
+      - name: 对候选 ZIP 生成构建来源证明
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.locate.outputs.zip_path }}
+          show-summary: true

@@ -4,6 +4,20 @@
 
 ## 0. 当前状态（先读，别假设）
 
+- 2026-11-17 需求缺口重扫：X02 attestation 工作流源码补齐 + 台账增量（提交见 fcdad62 之后）：
+  对照 `docs/IMPLEMENTATION_STATUS.md` 逐行复核，本地代码可关闭的缺口已收敛到极小——
+  **X02（构建来源证明）**的「待实现」部分关闭：`release.yml` 新增独立
+  `attest-build-provenance` job，`id-token: write` + `attestations: write` 只授予该 job
+  （发布 job 其余步骤保持 `contents: read`），下载通过全部门禁的候选 artifact 后对候选 ZIP
+  产出 provenance；`download-artifact@9000827c`（v8.0.2）/`attest-build-provenance@4d101475`
+  （v4.2.2）固定完整 SHA。**真实 runner 产出与下游验证仍开放**，X02 外部条件状态不变。
+  台账新增「2026-11-12 重扫增量」节：更正 U01（设计令牌已重写）/F02（区域粘贴与内联编辑
+  已接往来单位生产页）/V01（集成 7/7 刷新为 3027e386 运行）等历史快照；记录
+  `scripts/tests` 89 项全过的运行条件（Git Bash 在 PATH + 仓库根执行 discover）。
+  剩余项全部为外部条件（X01–X11）或随业务定义（跨功能任务协议/归档导入/批量业务导入——
+  底座当前唯一的真实长任务是审计 CSV 导出，通用协议在业务任务出现前没有第二个消费者，
+  任务页已含当前活动聚合 + 本人任务 + 持久历史）。
+
 - 2026-11-12 日期时间输入组件收口（共享选择器 + 范围选择器提升 + 两处真缺陷修复）：
   `lib/ui/widgets/ui_date_pickers.dart` 现在承载全站唯二的日期时间输入组件——
   单值 `showUiDatePicker`（日历 + 可选 24h 时钟，格式/校验由调用方注入，文本框仍是
