@@ -72,28 +72,46 @@ jobs:
           python3 -B scripts/check_sources.py
           if ! git diff --exit-code -- lib/src/rust rust/src/frb_generated.rs; then
             echo "::error::生成物与提交不一致：改过 rust/src/api 后必须本地重跑 codegen 并提交生成物（AGENTS.md §10）"
+            git diff -- lib/src/rust rust/src/frb_generated.rs | head -n 40 | sed 's/^/::error::/'
             git status --short
             exit 1
           fi
           generated_status="$(git status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock)"
           if [[ -n "$generated_status" ]]; then
             echo "::error::生成物或锁文件有未提交差异（含新增文件）。"
-            printf '%s\n' "$generated_status"
+            printf '%s\n' "$generated_status" | sed 's/^/::error::/'
             exit 1
           fi
 
       - name: Rust 门禁
         working-directory: rust
         run: |
-          cargo fmt --all --check
-          cargo clippy --locked --all-targets -- -D warnings
-          cargo test --locked
+          if ! cargo fmt --all --check > "$RUNNER_TEMP/ci-fmt.log" 2>&1; then
+            echo "::error::cargo fmt --check reported differences:"
+            head -n 40 "$RUNNER_TEMP/ci-fmt.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          if ! cargo clippy --locked --all-targets -- -D warnings > "$RUNNER_TEMP/ci-clippy.log" 2>&1; then
+            echo "::error::cargo clippy failed:"
+            grep -E "^error(\[|:)|^warning:" "$RUNNER_TEMP/ci-clippy.log" | head -n 25 | sed 's/^/::error::/'
+            tail -n 10 "$RUNNER_TEMP/ci-clippy.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          if ! cargo test --locked > "$RUNNER_TEMP/ci-test.log" 2>&1; then
+            echo "::error::cargo test failed:"
+            grep -E "^error|panicked at|FAILED|^test .* FAILED|test result:" "$RUNNER_TEMP/ci-test.log" | head -n 25 | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - name: Dart 门禁
         run: |
-          dart format --set-exit-if-changed lib test integration_test
-          flutter analyze
-          flutter test
+          if ! dart format --output=none --set-exit-if-changed lib test integration_test > "$RUNNER_TEMP/ci-dart-format.log" 2>&1; then
+            echo "::error::dart format reported differences:"
+            tail -n 20 "$RUNNER_TEMP/ci-dart-format.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          flutter analyze --no-pub --reporter=github
+          flutter test --no-pub --reporter=github
 
       - name: 桥接端到端（真实加载 Rust 动态库）
         shell: pwsh
@@ -105,7 +123,7 @@ jobs:
           generated_status="$(git status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock)"
           if [[ -n "$generated_status" ]]; then
             echo "::error::构建或集成测试改变了生成物或锁文件。"
-            printf '%s\n' "$generated_status"
+            printf '%s\n' "$generated_status" | sed 's/^/::error::/'
             exit 1
           fi
 
@@ -218,15 +236,19 @@ jobs:
           generated_status="$(git status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock)"
           if [[ -n "$generated_status" ]]; then
             echo "::error::桥接生成物或锁文件与提交不一致；请在开发环境生成、核对并提交。"
-            printf '%s\n' "$generated_status"
+            printf '%s\n' "$generated_status" | sed 's/^/::error::/'
             exit 1
           fi
 
       - name: Dart 门禁
         run: |
-          dart format --output=none --set-exit-if-changed lib test integration_test
-          flutter analyze --no-pub
-          flutter test --no-pub
+          if ! dart format --output=none --set-exit-if-changed lib test integration_test > "$RUNNER_TEMP/ci-dart-format.log" 2>&1; then
+            echo "::error::dart format reported differences:"
+            tail -n 20 "$RUNNER_TEMP/ci-dart-format.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          flutter analyze --no-pub --reporter=github
+          flutter test --no-pub --reporter=github
 
       - name: Flutter Linux Release 构建（含 Rust 动态库）
         run: flutter build linux --release --no-pub
@@ -243,7 +265,7 @@ jobs:
           generated_status="$(git status --porcelain --untracked-files=all -- lib/src/rust rust/src/frb_generated.rs pubspec.lock rust/Cargo.lock)"
           if [[ -n "$generated_status" ]]; then
             echo "::error::构建或集成测试改变了生成物或锁文件。"
-            printf '%s\n' "$generated_status"
+            printf '%s\n' "$generated_status" | sed 's/^/::error::/'
             exit 1
           fi
 
@@ -266,8 +288,12 @@ jobs:
           python3 -B -m unittest discover -s scripts/tests -p 'test_*.py' -v
           bash -n scripts/security-check.sh
       - name: 隔离集成执行器回归（假 Flutter，不是桌面验收）
-        shell: pwsh
-        run: ./scripts/tests/test_integration_check.ps1
+        run: |
+          if ! pwsh -NoLogo -NoProfile -File scripts/tests/test_integration_check.ps1 > "$RUNNER_TEMP/ci-executor-test.log" 2>&1; then
+            echo "::error::isolated integration executor regression failed:"
+            tail -n 30 "$RUNNER_TEMP/ci-executor-test.log" | sed 's/^/::error::/'
+            exit 1
+          fi
 
   linux-rust:
     name: Linux 门禁（Rust 层可移植性冒烟）
@@ -283,6 +309,19 @@ jobs:
       - name: Rust 门禁
         working-directory: rust
         run: |
-          cargo fmt --all --check
-          cargo clippy --all-targets -- -D warnings
-          cargo test
+          if ! cargo fmt --all --check > "$RUNNER_TEMP/ci-fmt.log" 2>&1; then
+            echo "::error::cargo fmt --check reported differences:"
+            head -n 40 "$RUNNER_TEMP/ci-fmt.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          if ! cargo clippy --all-targets -- -D warnings > "$RUNNER_TEMP/ci-clippy.log" 2>&1; then
+            echo "::error::cargo clippy failed:"
+            grep -E "^error(\[|:)|^warning:" "$RUNNER_TEMP/ci-clippy.log" | head -n 25 | sed 's/^/::error::/'
+            tail -n 10 "$RUNNER_TEMP/ci-clippy.log" | sed 's/^/::error::/'
+            exit 1
+          fi
+          if ! cargo test > "$RUNNER_TEMP/ci-test.log" 2>&1; then
+            echo "::error::cargo test failed:"
+            grep -E "^error|panicked at|FAILED|^test .* FAILED|test result:" "$RUNNER_TEMP/ci-test.log" | head -n 25 | sed 's/^/::error::/'
+            exit 1
+          fi
