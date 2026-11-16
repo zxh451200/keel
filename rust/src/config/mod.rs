@@ -285,10 +285,10 @@ fn platform_data_dir() -> Option<PathBuf> {
 
 #[cfg(not(windows))]
 fn platform_data_dir() -> Option<PathBuf> {
-    if let Some(dir) = std::env::var_os("XDG_DATA_HOME") {
-        if !dir.is_empty() {
-            return Some(PathBuf::from(dir).join("keel"));
-        }
+    if let Some(dir) = std::env::var_os("XDG_DATA_HOME")
+        && !dir.is_empty()
+    {
+        return Some(PathBuf::from(dir).join("keel"));
     }
     std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share/keel"))
 }
