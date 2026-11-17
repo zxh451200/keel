@@ -10,6 +10,12 @@
 *.cmd text eol=crlf
 *.bat text eol=crlf
 
+# 桥接生成物固定 LF：autocrlf=true 的检出会把它们转成 CRLF，codegen 重写为
+# LF 后 git 视为「将被转换」而报 modified（diff 却为空），CI 可复现检查失败。
+# blob 本身已是 LF，此属性让任何环境的检出行尾与生成输出一致。
+lib/src/rust/** text eol=lf
+rust/src/frb_generated.rs text eol=lf
+
 # 二进制与生成物不做换行/文本处理
 *.png binary
 *.ico binary
