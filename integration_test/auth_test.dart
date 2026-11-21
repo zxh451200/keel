@@ -1,7 +1,5 @@
 // Real FRB + SQLite coverage for the sign-in gate. Run through
 // scripts/integration-check.ps1, which provides a fresh KEEL_DATA_DIR.
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:keel/src/rust/api/app.dart' as app;
@@ -11,33 +9,9 @@ import 'package:keel/src/rust/api/error.dart';
 import 'package:keel/src/rust/api/users.dart' as users;
 import 'package:keel/src/rust/frb_generated.dart';
 
-const _password = 'keel-pass-2026';
+import 'support/isolation.dart';
 
-Future<void> _requireIsolation() async {
-  final path = Platform.environment['KEEL_DATA_DIR'];
-  final token = Platform.environment['KEEL_FRB_TEST_TOKEN'];
-  if (path == null ||
-      token == null ||
-      !RegExp(r'^[0-9a-f]{32}$').hasMatch(token) ||
-      !Directory(path).isAbsolute) {
-    throw StateError('Run through scripts/integration-check.ps1.');
-  }
-  final root = Directory(path);
-  final expected = Directory(
-    '${Directory.systemTemp.path}${Platform.pathSeparator}keel-frb-$token',
-  );
-  if (root.absolute.uri != expected.absolute.uri) {
-    throw StateError('Unexpected integration data root.');
-  }
-  final entries = await root.list(followLinks: false).toList();
-  final marker = File('${root.path}/.keel-frb-test-owner');
-  if (entries.length != 1 ||
-      await FileSystemEntity.type(marker.path, followLinks: false) !=
-          FileSystemEntityType.file ||
-      await marker.readAsString() != token) {
-    throw StateError('Test root must contain only its ownership marker.');
-  }
-}
+const _password = 'keel-pass-2026';
 
 Future<ApiError> _error(Future<void> Function() operation, String code) async {
   try {
@@ -55,7 +29,7 @@ void main() {
   testWidgets('sign-in gate round-trips through the real bridge', (
     tester,
   ) async {
-    await _requireIsolation();
+    await requireIntegrationIsolation();
     await RustLib.init();
     expect(app.appStatus().databaseReady, isFalse);
     await app.initDatabase();
