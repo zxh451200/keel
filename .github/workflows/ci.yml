@@ -221,7 +221,13 @@ jobs:
         run: |
           if ! bash scripts/security-check.sh --strict > "$RUNNER_TEMP/ci-security-check.log" 2>&1; then
             echo "::error::security-check --strict failed:"
-            tail -n 25 "$RUNNER_TEMP/ci-security-check.log" | sed 's/^/::error::/'
+            # 检查输出全在报告目录文件里；summary.json 的 checks[] 有每项状态与错误。
+            summary="$(find build/reports -maxdepth 2 -name summary.json -path '*security-*' | sort | tail -n 1)"
+            if [[ -n "$summary" ]]; then
+              python -c "import json,sys; d=json.load(open(sys.argv[1],encoding='utf-8')); print('overall:',d.get('status'),'exit:',d.get('exit_code')); [print(c.get('name'),c.get('status'),'exit',c.get('exit_code'),'|',(c.get('error') or '')[:160]) for c in d.get('checks',[])]" "$summary" | head -n 20 | sed 's/^/::error::/'
+            else
+              echo "::error::(no security summary.json written)"
+            fi
             exit 1
           fi
 
