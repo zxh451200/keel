@@ -134,14 +134,17 @@ jobs:
           ./scripts/integration-check.ps1 -Device windows 2>&1 | Tee-Object -FilePath build/reports/ci-integration-console.log
           if ($LASTEXITCODE -ne 0) {
             $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
-            $errs = @($log | Select-String '\[E\]|^Error|error:|FAILED|Exception' | Select-Object -Last 8 | ForEach-Object { $_.Line.Trim() })
-            $entries = @($log | Select-String '^> flutter test' | ForEach-Object { $_.Line.Trim() })
+            $tail = ($log | Select-Object -Last 80) -join "`n"
             $summaryFile = Get-ChildItem build/reports/integration-windows-*/summary.json -ErrorAction SilentlyContinue | Select-Object -Last 1
-            $summaryText = if ($summaryFile) { (Get-Content $summaryFile.FullName -Raw) } else { '(no summary.json)' }
-            if ($summaryText.Length -gt 2500) { $summaryText = $summaryText.Substring(0, 2500) }
-            $text = ($entries + $errs + @('--- summary ---', $summaryText)) -join "`n"
-            if ($text.Length -gt 3000) { $text = $text.Substring(0, 3000) + "...(truncated)" }
-            Write-Output ("::error::integration failure detail: " + ($text -replace "`r?`n", '%0A'))
+            $summaryText = if ($summaryFile) { Get-Content $summaryFile.FullName -Raw } else { '(no summary.json written)' }
+            $report = @('## Integration failure (ci console tail)', '```', $tail, '```', '## summary.json', '```json', $summaryText, '```') -join "`n"
+            if ($report.Length -gt 55000) { $report = $report.Substring(0, 55000) }
+            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report
+            $statusLines = @()
+            if ($summaryFile) {
+              try { $s = Get-Content $summaryFile.FullName -Raw | ConvertFrom-Json; $statusLines = @($s.entries | ForEach-Object { "$($_.target) => $($_.status) exit=$($_.exit_code) error=$($_.error)" }) } catch { $statusLines = @('summary parse failed: ' + $_.Exception.Message) }
+            } else { $statusLines = @('(no summary.json)') }
+            foreach ($line in $statusLines | Select-Object -First 9) { Write-Output ("::error::" + $line.Replace('%',' pct ')) }
             exit $LASTEXITCODE
           }
 
