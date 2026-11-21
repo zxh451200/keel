@@ -131,11 +131,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build/reports | Out-Null
-          # Actions 的 pwsh 步骤默认 EAP=Stop：flutter 写 stderr 的提示经 2>&1|Tee
-          # 会被判终止性错误炸掉步骤（AGENTS.md §0 2026-11-10 同款坑），调用期间
-          # 局部 Continue，成败仍由脚本退出码判定。
+          # 不能用 `脚本 | Tee-Object`：脚本内的 exit 1 作为管道左段会直接终止
+          # 整个步骤，后续语句全部跳过（run #15-18 诊断不出现的原因）。
+          # 文件重定向在语句完成后保留 $LASTEXITCODE；EAP 局部 Continue 兜底
+          # flutter 写 stderr 的既有坑（AGENTS.md §0 2026-11-10）。
           $ErrorActionPreference = 'Continue'
-          ./scripts/integration-check.ps1 -Device windows 2>&1 | Tee-Object -FilePath build/reports/ci-integration-console.log
+          ./scripts/integration-check.ps1 -Device windows > build/reports/ci-integration-console.log 2>&1
           $ec = $LASTEXITCODE
           $ErrorActionPreference = 'Stop'
           if ($ec -ne 0) {
