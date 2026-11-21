@@ -131,8 +131,14 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build/reports | Out-Null
+          # Actions 的 pwsh 步骤默认 EAP=Stop：flutter 写 stderr 的提示经 2>&1|Tee
+          # 会被判终止性错误炸掉步骤（AGENTS.md §0 2026-11-10 同款坑），调用期间
+          # 局部 Continue，成败仍由脚本退出码判定。
+          $ErrorActionPreference = 'Continue'
           ./scripts/integration-check.ps1 -Device windows 2>&1 | Tee-Object -FilePath build/reports/ci-integration-console.log
-          if ($LASTEXITCODE -ne 0) {
+          $ec = $LASTEXITCODE
+          $ErrorActionPreference = 'Stop'
+          if ($ec -ne 0) {
             $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
             $tail = ($log | Select-Object -Last 80) -join "`n"
             $summaryFile = Get-ChildItem build/reports/integration-windows-*/summary.json -ErrorAction SilentlyContinue | Select-Object -Last 1
@@ -145,7 +151,7 @@ jobs:
               try { $s = Get-Content $summaryFile.FullName -Raw | ConvertFrom-Json; $statusLines = @($s.entries | ForEach-Object { "$($_.target) => $($_.status) exit=$($_.exit_code) error=$($_.error)" }) } catch { $statusLines = @('summary parse failed: ' + $_.Exception.Message) }
             } else { $statusLines = @('(no summary.json)') }
             foreach ($line in $statusLines | Select-Object -First 9) { Write-Output ("::error::" + $line.Replace('%',' pct ')) }
-            exit $LASTEXITCODE
+            exit $ec
           }
 
       - name: 构建及集成测试后检查锁文件与生成物
