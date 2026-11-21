@@ -1,6 +1,7 @@
 [toolchain]
-# 锁定为当前 stable；CI 与开发机使用同一工具链，不跟随 nightly。
-# 见 AGENTS.md §2.2。正式版本如需精确到补丁号，再改为具体版本（如 "1.83.0"）。
-channel = "stable"
+# 锁定到具体补丁号，与开发机已验证版本一致（AGENTS.md §0/§2.2：CI 与开发机
+# 同一工具链）。2026-11-21 起不再跟随 stable 浮动——runner 镜像每周更新曾让
+# 新版 clippy 在 CI 打出本地不存在的 lint（run #13），锁定后双方一致。
+channel = "1.99.1"
 components = ["rustfmt", "clippy"]
 profile = "minimal"
