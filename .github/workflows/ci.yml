@@ -145,6 +145,7 @@ jobs:
           $summaryText = if ($summaryFile) { Get-Content $summaryFile.FullName -Raw -ErrorAction SilentlyContinue } else { '(no summary.json written)' }
           $status = 'UNKNOWN'
           $statusLines = @()
+          $s = $null
           try {
             if ($summaryFile) {
               $s = Get-Content $summaryFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
@@ -160,6 +161,23 @@ jobs:
             if ($env:GITHUB_STEP_SUMMARY) { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report -ErrorAction SilentlyContinue }
             foreach ($line in @("status=$status failReason=$failReason") + $statusLines) {
               Write-Output ("::error::" + $line.Replace('%', ' pct ').Replace("`r", '').Replace("`n", ' '))
+            }
+            # 失败 entry 自己的 log 尾部：构建/加载失败的原因在 flutter 输出里
+            if ($s -and $summaryFile) {
+              foreach ($failEntry in @($s.entries | Where-Object { $_.status -eq 'FAIL' })) {
+                $entryLogPath = Join-Path $summaryFile.DirectoryName $failEntry.log
+                if (Test-Path -LiteralPath $entryLogPath) {
+                  $entryTail = @((Get-Content -LiteralPath $entryLogPath -ErrorAction SilentlyContinue | Select-Object -Last 60))
+                  $ereport = @("## $($failEntry.target) log tail", '```', ($entryTail -join "`n"), '```') -join "`n"
+                  if ($ereport.Length -gt 55000) { $ereport = $ereport.Substring(0, 55000) }
+                  if ($env:GITHUB_STEP_SUMMARY) { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $ereport -ErrorAction SilentlyContinue }
+                  foreach ($line in ($entryTail | Select-Object -Last 8)) {
+                    Write-Output ("::error::" + $line.Replace('%', ' pct ').Replace("`r", '').Replace("`n", ' '))
+                  }
+                } else {
+                  Write-Output "::error::(entry log not found: $($failEntry.log))"
+                }
+              }
             }
           }
           if ($status -ne 'PASS' -or $failReason) { exit 1 }
