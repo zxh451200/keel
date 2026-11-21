@@ -133,7 +133,14 @@ jobs:
           New-Item -ItemType Directory -Force -Path build/reports | Out-Null
           ./scripts/integration-check.ps1 -Device windows 2>&1 | Tee-Object -FilePath build/reports/ci-integration-console.log
           if ($LASTEXITCODE -ne 0) {
-            Get-Content build/reports/ci-integration-console.log -Tail 30 | ForEach-Object { Write-Output "::error::$_" }
+            $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
+            $errs = @($log | Select-String '\[E\]|^Error|error:|FAILED|Exception' | Select-Object -Last 8 | ForEach-Object { $_.Line.Trim() })
+            $entries = @($log | Select-String '^> flutter test' | ForEach-Object { $_.Line.Trim() })
+            $summaryFile = Get-ChildItem build/reports/integration-windows-*/summary.json -ErrorAction SilentlyContinue | Select-Object -Last 1
+            $summaryText = if ($summaryFile) { (Get-Content $summaryFile.FullName -Raw) } else { '(no summary.json)' }
+            if ($summaryText.Length -gt 2500) { $summaryText = $summaryText.Substring(0, 2500) }
+            $text = ($entries + $errs + @('--- summary ---', $summaryText)) -join "`n"
+            Write-Output ("::error::integration failure detail: " + ($text -replace "`r?`n", '%0A'))
             exit $LASTEXITCODE
           }
 
