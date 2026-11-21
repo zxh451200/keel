@@ -140,6 +140,7 @@ jobs:
             $summaryText = if ($summaryFile) { (Get-Content $summaryFile.FullName -Raw) } else { '(no summary.json)' }
             if ($summaryText.Length -gt 2500) { $summaryText = $summaryText.Substring(0, 2500) }
             $text = ($entries + $errs + @('--- summary ---', $summaryText)) -join "`n"
+            if ($text.Length -gt 3000) { $text = $text.Substring(0, 3000) + "...(truncated)" }
             Write-Output ("::error::integration failure detail: " + ($text -replace "`r?`n", '%0A'))
             exit $LASTEXITCODE
           }
