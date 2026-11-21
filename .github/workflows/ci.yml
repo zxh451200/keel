@@ -131,42 +131,38 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path build/reports | Out-Null
-          # 不能用 `脚本 | Tee-Object`：脚本内的 exit 1 作为管道左段会直接终止
-          # 整个步骤，后续语句全部跳过（run #15-18 诊断不出现的原因）。
-          # 文件重定向在语句完成后保留 $LASTEXITCODE；EAP 局部 Continue 兜底
-          # flutter 写 stderr 的既有坑（AGENTS.md §0 2026-11-10）。
+          # integration-check.ps1 的失败契约是 terminating exception（catch→throw
+          # 重抛→finally 写 summary），不是 exit code——必须用 try/catch 接住，
+          # 以 summary.json 的 status 判成败；$LASTEXITCODE 在失败路径不可用。
           $ErrorActionPreference = 'Continue'
-          ./scripts/integration-check.ps1 -Device windows > build/reports/ci-integration-console.log 2>&1
-          $ec = $LASTEXITCODE
-          $ErrorActionPreference = 'Stop'
-          if ($ec -ne 0) {
-            try {
-              Write-Output "::error::BRANCH-ENTERED ec=$ec"
-              $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
-              $tail = ($log | Select-Object -Last 80) -join "`n"
-              $summaryFile = Get-ChildItem "build/reports/integration-windows-*/summary.json" -ErrorAction SilentlyContinue | Select-Object -Last 1
-              $summaryText = if ($summaryFile) { Get-Content $summaryFile.FullName -Raw -ErrorAction SilentlyContinue } else { '(no summary.json written)' }
-              $statusLines = @()
-              try {
-                if ($summaryFile) {
-                  $s = Get-Content $summaryFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
-                  $statusLines = @($s.entries | ForEach-Object { "$($_.target) => $($_.status) exit=$($_.exit_code) error=$($_.error)" })
-                } else { $statusLines = @('(no summary.json)') }
-              } catch { $statusLines = @('summary parse failed: ' + $_.Exception.Message) }
-              if ($env:GITHUB_STEP_SUMMARY) {
-                try {
-                  $report = @('## Integration failure (ci console tail)', '```', $tail, '```', '## summary.json', '```json', $summaryText, '```') -join "`n"
-                  if ($report.Length -gt 55000) { $report = $report.Substring(0, 55000) }
-                  Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report -ErrorAction SilentlyContinue
-                  Write-Output '::error::STEP-SUMMARY-WRITTEN'
-                } catch { Write-Output ("::error::step-summary write failed: " + $_.Exception.Message) }
-              } else { Write-Output '::error::GITHUB_STEP_SUMMARY not set' }
-              foreach ($line in $statusLines | Select-Object -First 9) { Write-Output ("::error::" + $line.Replace('%',' pct ')) }
-            } catch {
-              Write-Output ("::error::failure-diagnostic crashed: " + $_.Exception.Message)
-            }
-            exit $ec
+          $failReason = $null
+          try {
+            ./scripts/integration-check.ps1 -Device windows > build/reports/ci-integration-console.log 2>&1
+          } catch {
+            $failReason = $_.Exception.Message
           }
+          $summaryFile = Get-ChildItem "build/reports/integration-windows-*/summary.json" -ErrorAction SilentlyContinue | Select-Object -Last 1
+          $summaryText = if ($summaryFile) { Get-Content $summaryFile.FullName -Raw -ErrorAction SilentlyContinue } else { '(no summary.json written)' }
+          $status = 'UNKNOWN'
+          $statusLines = @()
+          try {
+            if ($summaryFile) {
+              $s = Get-Content $summaryFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+              $status = $s.status
+              $statusLines = @($s.entries | ForEach-Object { "$($_.target) => $($_.status) exit=$($_.exit_code) error=$($_.error)" })
+            }
+          } catch { $statusLines = @('summary parse failed: ' + $_.Exception.Message) }
+          if ($statusLines.Count -gt 0) {
+            $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
+            $tail = ($log | Select-Object -Last 80) -join "`n"
+            $report = @('## Integration failure', '```', $tail, '```', '## summary.json', '```json', $summaryText, '```') -join "`n"
+            if ($report.Length -gt 55000) { $report = $report.Substring(0, 55000) }
+            if ($env:GITHUB_STEP_SUMMARY) { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report -ErrorAction SilentlyContinue }
+            foreach ($line in @("status=$status failReason=$failReason") + $statusLines) {
+              Write-Output ("::error::" + $line.Replace('%', ' pct ').Replace("`r", '').Replace("`n", ' '))
+            }
+          }
+          if ($status -ne 'PASS' -or $failReason) { exit 1 }
 
       - name: 构建及集成测试后检查锁文件与生成物
         run: |
