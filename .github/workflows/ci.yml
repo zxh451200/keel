@@ -140,18 +140,31 @@ jobs:
           $ec = $LASTEXITCODE
           $ErrorActionPreference = 'Stop'
           if ($ec -ne 0) {
-            $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
-            $tail = ($log | Select-Object -Last 80) -join "`n"
-            $summaryFile = Get-ChildItem build/reports/integration-windows-*/summary.json -ErrorAction SilentlyContinue | Select-Object -Last 1
-            $summaryText = if ($summaryFile) { Get-Content $summaryFile.FullName -Raw } else { '(no summary.json written)' }
-            $report = @('## Integration failure (ci console tail)', '```', $tail, '```', '## summary.json', '```json', $summaryText, '```') -join "`n"
-            if ($report.Length -gt 55000) { $report = $report.Substring(0, 55000) }
-            Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report
-            $statusLines = @()
-            if ($summaryFile) {
-              try { $s = Get-Content $summaryFile.FullName -Raw | ConvertFrom-Json; $statusLines = @($s.entries | ForEach-Object { "$($_.target) => $($_.status) exit=$($_.exit_code) error=$($_.error)" }) } catch { $statusLines = @('summary parse failed: ' + $_.Exception.Message) }
-            } else { $statusLines = @('(no summary.json)') }
-            foreach ($line in $statusLines | Select-Object -First 9) { Write-Output ("::error::" + $line.Replace('%',' pct ')) }
+            try {
+              Write-Output "::error::BRANCH-ENTERED ec=$ec"
+              $log = Get-Content build/reports/ci-integration-console.log -ErrorAction SilentlyContinue
+              $tail = ($log | Select-Object -Last 80) -join "`n"
+              $summaryFile = Get-ChildItem "build/reports/integration-windows-*/summary.json" -ErrorAction SilentlyContinue | Select-Object -Last 1
+              $summaryText = if ($summaryFile) { Get-Content $summaryFile.FullName -Raw -ErrorAction SilentlyContinue } else { '(no summary.json written)' }
+              $statusLines = @()
+              try {
+                if ($summaryFile) {
+                  $s = Get-Content $summaryFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                  $statusLines = @($s.entries | ForEach-Object { "$($_.target) => $($_.status) exit=$($_.exit_code) error=$($_.error)" })
+                } else { $statusLines = @('(no summary.json)') }
+              } catch { $statusLines = @('summary parse failed: ' + $_.Exception.Message) }
+              if ($env:GITHUB_STEP_SUMMARY) {
+                try {
+                  $report = @('## Integration failure (ci console tail)', '```', $tail, '```', '## summary.json', '```json', $summaryText, '```') -join "`n"
+                  if ($report.Length -gt 55000) { $report = $report.Substring(0, 55000) }
+                  Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report -ErrorAction SilentlyContinue
+                  Write-Output '::error::STEP-SUMMARY-WRITTEN'
+                } catch { Write-Output ("::error::step-summary write failed: " + $_.Exception.Message) }
+              } else { Write-Output '::error::GITHUB_STEP_SUMMARY not set' }
+              foreach ($line in $statusLines | Select-Object -First 9) { Write-Output ("::error::" + $line.Replace('%',' pct ')) }
+            } catch {
+              Write-Output ("::error::failure-diagnostic crashed: " + $_.Exception.Message)
+            }
             exit $ec
           }
 
