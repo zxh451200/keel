@@ -159,7 +159,7 @@ jobs:
             $report = @('## Integration failure', '```', $tail, '```', '## summary.json', '```json', $summaryText, '```') -join "`n"
             if ($report.Length -gt 55000) { $report = $report.Substring(0, 55000) }
             if ($env:GITHUB_STEP_SUMMARY) { Add-Content -Path $env:GITHUB_STEP_SUMMARY -Value $report -ErrorAction SilentlyContinue }
-            foreach ($line in @("status=$status failReason=$failReason") + $statusLines) {
+            foreach ($line in @("status=$status failReason=$failReason") + @($statusLines | Where-Object { $_ -match '=> FAIL' })) {
               Write-Output ("::error::" + $line.Replace('%', ' pct ').Replace("`r", '').Replace("`n", ' '))
             }
             # 失败 entry 自己的 log 尾部：构建/加载失败的原因在 flutter 输出里
@@ -218,7 +218,12 @@ jobs:
           "$tools/gitleaks.exe" version
 
       - name: 许可证 / 来源 / 重复依赖 / RustSec 公告 / OSV / 密钥扫描
-        run: bash scripts/security-check.sh --strict
+        run: |
+          if ! bash scripts/security-check.sh --strict > "$RUNNER_TEMP/ci-security-check.log" 2>&1; then
+            echo "::error::security-check --strict failed:"
+            tail -n 25 "$RUNNER_TEMP/ci-security-check.log" | sed 's/^/::error::/'
+            exit 1
+          fi
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
