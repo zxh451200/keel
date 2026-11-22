@@ -71,3 +71,6 @@ poc/*/lib/l10n/poc_localizations*.dart
 
 # 会话工具的本地记忆笔记，不入库
 /.workbuddy/
+
+# 品牌素材源包（38 MB 二进制，本机保留，不进仓库）
+/品牌.zip
